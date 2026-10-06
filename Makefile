@@ -27,7 +27,7 @@ build:
 build-target:
 	$(MAKE) -C sys
 	$(MAKE) -C sys/kernel
-	gcc -O2 -s -o sys/bin/glare sys/glare/glare.c
+	gcc -O2 -s -o sys/bin/glare sys/glare/glare.c -lX11
 	gcc -static -O2 -s -o pkg/dive pkg/dive.c
 	gcc -static -O2 -s -o sys/init/init sys/init/init.c
 	gcc -O2 -s -o installer/depth-install installer/depth-install.c

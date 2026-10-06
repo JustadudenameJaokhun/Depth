@@ -7,6 +7,72 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#include <X11/Xutil.h>
+
+static void set_depth_wallpaper(void) {
+    Display *dpy = NULL;
+    for (int i = 0; i < 20; i++) {
+        dpy = XOpenDisplay(":0");
+        if (dpy) break;
+        usleep(50000);
+    }
+    if (!dpy) return;
+    int scr = DefaultScreen(dpy);
+    Window root = RootWindow(dpy, scr);
+    int w = DisplayWidth(dpy, scr);
+    int h = DisplayHeight(dpy, scr);
+    if (w <= 0 || h <= 0) {
+        w = 1024;
+        h = 768;
+    }
+    int d = DefaultDepth(dpy, scr);
+    Visual *vis = DefaultVisual(dpy, scr);
+    Pixmap pm = XCreatePixmap(dpy, root, w, h, d);
+    GC gc = XCreateGC(dpy, pm, 0, NULL);
+    XImage *img = XCreateImage(dpy, vis, d, ZPixmap, 0, NULL, w, h, 32, 0);
+    if (!img) {
+        XFreeGC(dpy, gc);
+        XFreePixmap(dpy, pm);
+        XCloseDisplay(dpy);
+        return;
+    }
+    img->data = malloc(img->bytes_per_line * h);
+    if (!img->data) {
+        XDestroyImage(img);
+        XFreeGC(dpy, gc);
+        XFreePixmap(dpy, pm);
+        XCloseDisplay(dpy);
+        return;
+    }
+    for (int y = 0; y < h; y++) {
+        float yr = (float)y / (float)(h > 1 ? h - 1 : 1);
+        for (int x = 0; x < w; x++) {
+            float xr = (float)x / (float)(w > 1 ? w - 1 : 1);
+            float t = (xr + yr) * 0.5f;
+            int r = (int)((1.0f - t) * 220.0f + t * 8.0f);
+            int g = (int)((1.0f - t) * 20.0f + t * 8.0f);
+            int b = (int)((1.0f - t) * 20.0f + t * 12.0f);
+            unsigned long pixel = ((unsigned long)(r & 0xff) << 16) |
+                                  ((unsigned long)(g & 0xff) << 8) |
+                                  ((unsigned long)(b & 0xff));
+            XPutPixel(img, x, y, pixel);
+        }
+    }
+    XPutImage(dpy, pm, gc, img, 0, 0, 0, 0, w, h);
+    XDestroyImage(img);
+    XFreeGC(dpy, gc);
+    Atom p_root = XInternAtom(dpy, "_XROOTPMAP_ID", False);
+    Atom p_eset = XInternAtom(dpy, "ESETROOT_PMAP_ID", False);
+    XChangeProperty(dpy, root, p_root, XA_PIXMAP, 32, PropModeReplace, (unsigned char *)&pm, 1);
+    XChangeProperty(dpy, root, p_eset, XA_PIXMAP, 32, PropModeReplace, (unsigned char *)&pm, 1);
+    XSetWindowBackgroundPixmap(dpy, root, pm);
+    XClearWindow(dpy, root);
+    XSetCloseDownMode(dpy, RetainPermanent);
+    XFlush(dpy);
+    XCloseDisplay(dpy);
+}
 
 int main(int argc, char **argv) {
     printf("\n\033[1;32m[GLARE]\033[0m Initializing Cinnamon Desktop Environment on Depth Hinux...\n");
@@ -22,11 +88,13 @@ int main(int argc, char **argv) {
     setenv("CINNAMON_2D", "1", 1);
     setenv("LIBGL_ALWAYS_SOFTWARE", "1", 1);
     setenv("GALLIUM_DRIVER", "llvmpipe", 1);
+    setenv("LP_NUM_THREADS", "4", 1);
     setenv("MESA_LOADER_DRIVER_OVERRIDE", "kms_swrast", 1);
     setenv("COGL_DRIVER", "gl", 1);
     setenv("CLUTTER_PAINT", "disable-culling", 1);
-    setenv("CLUTTER_DEFAULT_FPS", "30", 1);
-    setenv("CINNAMON_SLOWDOWN_FACTOR", "0.0001", 1);
+    setenv("CLUTTER_DEFAULT_FPS", "60", 1);
+    setenv("CLUTTER_VBLANK", "none", 1);
+    setenv("CINNAMON_SLOWDOWN_FACTOR", "1.0", 1);
     setenv("MUFFIN_NO_SHADOWS", "1", 1);
     setenv("NO_AT_BRIDGE", "1", 1);
     setenv("HOME", "/root", 1);
@@ -75,6 +143,7 @@ int main(int argc, char **argv) {
             usleep(100000);
             if (access("/tmp/.X11-unix/X0", F_OK) == 0) break;
         }
+        set_depth_wallpaper();
     }
 
     if (access("/usr/bin/dbus-daemon", X_OK) == 0) {
@@ -130,6 +199,7 @@ int main(int argc, char **argv) {
         }
     }
 
+    set_depth_wallpaper();
     pid_t sess_pid = fork();
     if (sess_pid == 0) {
         if (access("/usr/bin/cinnamon", X_OK) == 0) {

@@ -77,10 +77,54 @@ if [ "$MODE_VAL" = "glare" ]; then
     cp -a /usr/share/fonts/liberation "$STAGING"/usr/share/fonts/ 2>/dev/null || true
     mkdir -p "$STAGING"/usr/share/themes
     cp -a /usr/share/themes/Adwaita /usr/share/themes/Adwaita-dark /usr/share/themes/Default "$STAGING"/usr/share/themes/ 2>/dev/null || true
-    printf "[org.nemo.preferences]\ntreat-root-as-normal=true\nshow-desktop-icons=true\n\n[org.nemo.desktop]\nshow-desktop-icons=true\nbackground-fade=false\n\n[org.cinnamon.desktop.background]\npicture-options='none'\nprimary-color='#1a1b26'\nsecondary-color='#1a1b26'\ncolor-shading-type='solid'\n\n[org.cinnamon.desktop.interface]\nicon-theme='Adwaita'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon]\napp-menu-label='Depth'\napp-menu-icon-name='cinnamon-symbolic'\n\n[org.cinnamon.theme]\nname='Default'\n" > "$STAGING"/usr/share/glib-2.0/schemas/99_depth.gschema.override
+    mkdir -p "$STAGING"/usr/share/backgrounds "$STAGING"/usr/share/icons "$STAGING"/usr/share/icons/hicolor/scalable/apps "$STAGING"/usr/share/icons/Adwaita/scalable/apps
+    python3 - << 'PYEOF'
+import os
+from PIL import Image, ImageDraw
+
+staging = "/tmp/depth_initrd_staging"
+bg_dir = os.path.join(staging, "usr/share/backgrounds")
+os.makedirs(bg_dir, exist_ok=True)
+icon_dir = os.path.join(staging, "usr/share/icons")
+os.makedirs(icon_dir, exist_ok=True)
+
+w, h = 1024, 768
+r_start, g_start, b_start = 220, 20, 20
+r_end, g_end, b_end = 8, 8, 12
+buf = bytearray(w * h * 3)
+idx = 0
+for y in range(h):
+    y_r = y / (h - 1)
+    for x in range(w):
+        t = (x / (w - 1) + y_r) * 0.5
+        buf[idx] = int((1.0 - t) * r_start + t * r_end)
+        buf[idx + 1] = int((1.0 - t) * g_start + t * g_end)
+        buf[idx + 2] = int((1.0 - t) * b_start + t * b_end)
+        idx += 3
+img = Image.frombytes('RGB', (w, h), bytes(buf))
+img.save(os.path.join(bg_dir, "depth-wallpaper.png"), optimize=True)
+
+tri_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><polygon points="48,8 88,86 8,86" fill="rgb(230,25,25)"/></svg>\n'
+with open(os.path.join(icon_dir, "depth-triangle.svg"), "w") as f:
+    f.write(tri_svg)
+
+tri_img = Image.new('RGBA', (96, 96), (0, 0, 0, 0))
+draw = ImageDraw.Draw(tri_img)
+draw.polygon([(48, 8), (88, 86), (8, 86)], fill=(230, 25, 25, 255))
+tri_img.save(os.path.join(icon_dir, "depth-triangle.png"))
+PYEOF
+
+    cp -f "$STAGING"/usr/share/icons/depth-triangle.svg "$STAGING"/usr/share/cinnamon/theme/menu-symbolic.svg 2>/dev/null || true
+    cp -f "$STAGING"/usr/share/icons/depth-triangle.svg "$STAGING"/usr/share/icons/hicolor/scalable/apps/cinnamon-symbolic.svg 2>/dev/null || true
+    cp -f "$STAGING"/usr/share/icons/depth-triangle.svg "$STAGING"/usr/share/icons/hicolor/scalable/apps/depth-triangle.svg 2>/dev/null || true
+    cp -f "$STAGING"/usr/share/icons/depth-triangle.svg "$STAGING"/usr/share/icons/Adwaita/scalable/apps/depth-triangle.svg 2>/dev/null || true
+    mkdir -p "$STAGING"/usr/share/backgrounds/gnome
+    cp -f "$STAGING"/usr/share/backgrounds/depth-wallpaper.png "$STAGING"/usr/share/backgrounds/gnome/adwaita-l.jxl 2>/dev/null || true
+    cp -f "$STAGING"/usr/share/backgrounds/depth-wallpaper.png "$STAGING"/usr/share/backgrounds/gnome/adwaita-d.jxl 2>/dev/null || true
+    printf "[org.nemo.preferences]\ntreat-root-as-normal=true\nshow-desktop-icons=true\n\n[org.nemo.desktop]\nshow-desktop-icons=true\nbackground-fade=false\n\n[org.gnome.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#d32f2f'\nsecondary-color='#08080c'\ncolor-shading-type='solid'\n\n[org.cinnamon.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#d32f2f'\nsecondary-color='#08080c'\ncolor-shading-type='solid'\n\n[org.cinnamon.desktop.interface]\nicon-theme='Adwaita'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon]\ndesktop-effects=true\ndesktop-effects-on-menus=false\nwindow-effect-speed=2\nstartup-animation=false\nalttab-switcher-delay=0\napp-menu-label='Depth'\napp-menu-icon-name='/usr/share/icons/depth-triangle.svg'\n\n[org.cinnamon.muffin]\nunredirect-fullscreen-windows=true\nattach-modal-dialogs=true\n\n[org.cinnamon.theme]\nname='Default'\n" > "$STAGING"/usr/share/glib-2.0/schemas/99_depth.gschema.override
     glib-compile-schemas "$STAGING"/usr/share/glib-2.0/schemas/ 2>/dev/null || true
     mkdir -p "$STAGING"/root/.config/cinnamon/spices/menu@cinnamon.org
-    printf '{"menu-custom":{"type":"switch","default":false,"value":true},"menu-label":{"type":"entry","default":"Menu","value":"Depth"},"menu-icon":{"type":"iconfilechooser","default":"cinnamon-symbolic","value":"cinnamon-symbolic"}}\n' > "$STAGING"/root/.config/cinnamon/spices/menu@cinnamon.org/0.json
+    printf '{"menu-custom":{"type":"switch","default":false,"value":true},"menu-label":{"type":"entry","default":"Menu","value":"Depth"},"menu-icon":{"type":"iconfilechooser","default":"cinnamon-symbolic","value":"/usr/share/icons/depth-triangle.svg"},"menu-icon-size":{"type":"spinbutton","default":32,"value":32.0}}\n' > "$STAGING"/root/.config/cinnamon/spices/menu@cinnamon.org/0.json
     mkdir -p "$STAGING"/tmp/.X11-unix "$STAGING"/run/user/0 "$STAGING"/var/run/dbus "$STAGING"/var/lib/dbus "$STAGING"/etc/X11
     chmod 1777 "$STAGING"/tmp/.X11-unix
     printf "d3b07384d113edec49eaa6238ad5ff00\n" > "$STAGING"/etc/machine-id
