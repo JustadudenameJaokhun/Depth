@@ -11,6 +11,13 @@ for b in /home/jaokhun/Projects/Depth/sys/bin/*; do
     chmod +x "$STAGING"/bin/"$(basename "$b")"
 done
 
+cp -f /home/jaokhun/Projects/Depth/installer/depth-install "$STAGING"/bin/depthinstall
+cp -f /home/jaokhun/Projects/Depth/installer/depth-install "$STAGING"/usr/bin/depthinstall
+chmod +x "$STAGING"/bin/depthinstall "$STAGING"/usr/bin/depthinstall
+
+ln -sf /bin/shutdown "$STAGING"/sbin/shutdown
+ln -sf /bin/shutdown "$STAGING"/bin/poweroff
+
 cp -f /home/jaokhun/Projects/Depth/pkg/dive "$STAGING"/bin/dive
 cp -f /home/jaokhun/Projects/Depth/pkg/dive "$STAGING"/usr/bin/dive
 chmod +x "$STAGING"/bin/dive "$STAGING"/usr/bin/dive
@@ -30,15 +37,18 @@ cp -f /home/jaokhun/Projects/Depth/pkg/repo/repo.json "$STAGING"/etc/dive/repo.j
 
 printf "dimensions\n" > "$STAGING"/etc/hostname
 printf "nameserver 10.0.2.3\nnameserver 1.1.1.1\nnameserver 8.8.8.8\n" > "$STAGING"/etc/resolv.conf
-printf "root:x:0:0:root:/root:/bin/sh\n" > "$STAGING"/etc/passwd
+printf "root:x:0:0:root:/bin/sh\n" > "$STAGING"/etc/passwd
 printf "root:\$6\$W/s2mWJtU2KDanVG\$AxeYjt/g9d/qubvOm3eYCQikRlC2zaNLCF6RGeFiXkqiNGZhD8.H6FuUVox8V9aIbaBW9vUdUtVcfUfN8bi4/0:19800:0:99999:7:::\n" > "$STAGING"/etc/shadow
+
+MODE_VAL="${MODE:-bare}"
+printf "%s\n" "$MODE_VAL" > "$STAGING"/etc/depth-mode
 
 mkdir -p "$STAGING"/lib/modules
 cp -f /home/jaokhun/Projects/Depth/boot/modules/e1000.ko "$STAGING"/lib/modules/ 2>/dev/null || true
 
 mkdir -p "$STAGING"/lib "$STAGING"/lib64 "$STAGING"/usr/lib "$STAGING"/usr/lib64
 
-for lib in $(ldd /usr/bin/sh /usr/bin/fastfetch /usr/bin/ip /usr/bin/tar /usr/bin/gzip 2>/dev/null | grep -o '/[^ ]*' | sort -u); do
+for lib in $(ldd /usr/bin/sh /usr/bin/fastfetch /usr/bin/ip /usr/bin/tar /usr/bin/gzip /home/jaokhun/Projects/Depth/sys/bin/glare 2>/dev/null | grep -o '/[^ ]*' | sort -u); do
     if [ -f "$lib" ]; then
         target_dir="$STAGING"$(dirname "$lib")
         mkdir -p "$target_dir"

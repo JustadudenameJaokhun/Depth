@@ -45,7 +45,13 @@ int main(int argc, char **argv) {
 
     if (choice == 2) {
         printf("\n%sInvoking Depth Partition Engine...%s\n", COLOR_RED, COLOR_RESET);
-        system("python3 /home/jaokhun/Projects/Depth/installer/partition.py list");
+        if (access("installer/partition.py", R_OK) == 0) {
+            system("python3 installer/partition.py list");
+        } else if (access("/etc/installer/partition.py", R_OK) == 0) {
+            system("python3 /etc/installer/partition.py list");
+        } else {
+            system("lsblk 2>/dev/null || fdisk -l 2>/dev/null || cat /proc/partitions");
+        }
         return 0;
     }
 
@@ -54,20 +60,42 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    const char *target_dir = "/tmp/depth_target_sys";
+    char target_dir[256] = "/tmp/depth_target_sys";
+    if (access("/mnt", W_OK) == 0) {
+        strncpy(target_dir, "/mnt", sizeof(target_dir));
+    }
+    printf("%sInstallation destination [%s]: %s", COLOR_BOLD, target_dir, COLOR_RESET);
+    fflush(stdout);
+    if (argc <= 1) {
+        char in_buf[256];
+        if (fgets(in_buf, sizeof(in_buf), stdin)) {
+            char *nl = strchr(in_buf, '\n');
+            if (nl) *nl = '\0';
+            if (strlen(in_buf) > 0) {
+                strncpy(target_dir, in_buf, sizeof(target_dir));
+            }
+        }
+    } else {
+        printf("\n");
+    }
+
     char cmd[1024];
-
-    printf("\n%s[STEP 1/3]%s Preparing target filesystem hierarchy...\n", COLOR_RED, COLOR_RESET);
-    snprintf(cmd, sizeof(cmd), "mkdir -p %s/bin %s/etc %s/var/lib/dive/installed", target_dir, target_dir, target_dir);
+    printf("\n%s[STEP 1/3]%s Preparing target filesystem hierarchy on %s...\n", COLOR_RED, COLOR_RESET, target_dir);
+    snprintf(cmd, sizeof(cmd), "mkdir -p %s/bin %s/sbin %s/usr/bin %s/etc %s/lib %s/var/lib/dive/installed %s/root", target_dir, target_dir, target_dir, target_dir, target_dir, target_dir, target_dir);
     system(cmd);
 
-    printf("%s[STEP 2/3]%s Deploying pure assembly core utilities & dive...\n", COLOR_RED, COLOR_RESET);
-    snprintf(cmd, sizeof(cmd), "cp -rf /home/jaokhun/Projects/Depth/sys/bin/* %s/bin/ 2>/dev/null || true", target_dir);
-    system(cmd);
-    snprintf(cmd, sizeof(cmd), "cp -f /home/jaokhun/Projects/Depth/pkg/dive %s/bin/dive && cp -f /home/jaokhun/Projects/Depth/pkg/repo/repo.json %s/var/lib/dive/", target_dir, target_dir);
+    printf("%s[STEP 2/3]%s Deploying pure assembly core utilities & dive engine...\n", COLOR_RED, COLOR_RESET);
+    if (access("sys/bin", R_OK) == 0) {
+        snprintf(cmd, sizeof(cmd), "cp -rf sys/bin/* %s/bin/ 2>/dev/null || true", target_dir);
+        system(cmd);
+    } else if (access("/bin", R_OK) == 0) {
+        snprintf(cmd, sizeof(cmd), "cp -rf /bin/* %s/bin/ 2>/dev/null || true", target_dir);
+        system(cmd);
+    }
+    snprintf(cmd, sizeof(cmd), "cp -f /bin/dive %s/bin/dive 2>/dev/null || cp -f pkg/dive %s/bin/dive 2>/dev/null || true", target_dir, target_dir);
     system(cmd);
 
-    printf("%s[STEP 3/3]%s Generating boot configuration...\n", COLOR_RED, COLOR_RESET);
+    printf("%s[STEP 3/3]%s Generating system boot and fstab configuration...\n", COLOR_RED, COLOR_RESET);
     char fstab_path[512];
     snprintf(fstab_path, sizeof(fstab_path), "%s/etc/fstab", target_dir);
     FILE *f = fopen(fstab_path, "w");
@@ -77,7 +105,6 @@ int main(int argc, char **argv) {
     }
 
     printf("\n%s%s[SUCCESS]%s Depth Hinux successfully deployed to %s!\n", COLOR_BOLD, COLOR_RED, COLOR_RESET, target_dir);
-    printf("%sSystem is ready for reboot.%s\n\n", COLOR_DIM, COLOR_RESET);
-
+    printf("%sTo complete startup, reboot into target media or unmount.%s\n\n", COLOR_DIM, COLOR_RESET);
     return 0;
 }

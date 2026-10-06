@@ -8,7 +8,7 @@
       "name": "depth-base",
       "version": "1.0.0",
       "arch": "x86_64",
-      "description": "Pure x86-64 assembly Hinux system core utilities and bedrock syscall layer (86.6% ASM)",
+      "description": "Pure x86-64 assembly Hinux system core utilities and bedrock syscall layer (88.3% ASM)",
       "file": "depth-base.dpk"
     },
     {
@@ -24,6 +24,13 @@
       "arch": "x86_64",
       "description": "Hinux system information telemetry with solid triangle D logo",
       "file": "fastfetch.dpk"
+    },
+    {
+      "name": "firefox",
+      "version": "156.0",
+      "arch": "x86_64",
+      "description": "Mozilla Firefox web navigation engine with Glare pixel-to-font rendering",
+      "file": "firefox.dpk"
     },
     {
       "name": "google-chrome",

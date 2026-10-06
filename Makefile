@@ -5,13 +5,46 @@ all: build iso kernel
 kernel:
 	$(MAKE) -C sys/kernel
 
+bare:
+	$(MAKE) build-target MODE=bare
+
+glare:
+	$(MAKE) build-target MODE=glare
+
 build:
+	@if [ -t 0 ] && [ -z "$(MODE)" ]; then \
+		printf "Compile Depth Hinux target mode:\n  [1] bare  (Bedrock minimal CLI)\n  [2] glare (Font-UI window compositor with mouse support)\nSelect [1/2, default 1]: "; \
+		read -r ans; \
+		if [ "$$ans" = "2" ] || [ "$$ans" = "glare" ]; then \
+			$(MAKE) build-target MODE=glare; \
+		else \
+			$(MAKE) build-target MODE=bare; \
+		fi; \
+	else \
+		$(MAKE) build-target MODE=$(if $(MODE),$(MODE),bare); \
+	fi
+
+build-target:
 	$(MAKE) -C sys
 	$(MAKE) -C sys/kernel
+	nasm -f elf64 sys/asm/glare_font.asm -o sys/build/glare_font.o
+	gcc -O2 -s -o sys/bin/glare sys/glare/glare.c sys/build/glare_font.o
 	gcc -static -O2 -s -o pkg/dive pkg/dive.c
 	gcc -static -O2 -s -o sys/init/init sys/init/init.c
 	gcc -O2 -s -o installer/depth-install installer/depth-install.c
-	sh boot/build-initrd.sh
+	cp -f installer/depth-install sys/bin/depthinstall
+	gcc -O2 -s -o /tmp/firefox_bin pkg/src/firefox/firefox.c
+	mkdir -p /tmp/ff_pkg/bin /tmp/ff_pkg/usr/bin /tmp/ff_pkg/usr/lib/firefox /tmp/ff_pkg/etc/firefox
+	cp -f /tmp/firefox_bin /tmp/ff_pkg/bin/firefox
+	chmod +x /tmp/ff_pkg/bin/firefox
+	ln -sf /bin/firefox /tmp/ff_pkg/usr/bin/firefox
+	cp -f /usr/lib/firefox/firefox /tmp/ff_pkg/usr/lib/firefox/firefox 2>/dev/null || true
+	cp -f /usr/lib/firefox/application.ini /tmp/ff_pkg/usr/lib/firefox/ 2>/dev/null || true
+	cp -f /usr/lib/firefox/platform.ini /tmp/ff_pkg/usr/lib/firefox/ 2>/dev/null || true
+	printf "pref(\"browser.startup.homepage\", \"https://depth-hinux.org/welcome\");\n" > /tmp/ff_pkg/etc/firefox/firefox.conf
+	tar -czf pkg/repo/packages/firefox.dpk -C /tmp/ff_pkg .
+	rm -rf /tmp/ff_pkg /tmp/firefox_bin
+	MODE=$(MODE) sh boot/build-initrd.sh
 
 iso: build
 	sh boot/build-iso.sh
@@ -63,6 +96,6 @@ run-cli:
 clean:
 	$(MAKE) -C sys clean
 	$(MAKE) -C sys/kernel clean
-	rm -f pkg/dive sys/init/init installer/depth-install boot/depth-bare-initrd.img boot/depth-hinux.iso
+	rm -f pkg/dive sys/init/init installer/depth-install sys/bin/depthinstall sys/bin/glare boot/depth-bare-initrd.img boot/depth-hinux.iso
 
-.PHONY: all build iso kernel run-kernel run run-iso run-cli clean
+.PHONY: all bare glare build build-target iso kernel run-kernel run run-iso run-cli clean

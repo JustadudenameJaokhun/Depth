@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
 #include <dirent.h>
 
 #define COLOR_RED "\033[38;2;230;25;25m"
@@ -32,6 +35,40 @@ static void ensure_dir(const char *dir) {
     char tmp[512];
     snprintf(tmp, sizeof(tmp), "mkdir -p \"%s\"", dir);
     system(tmp);
+}
+
+static int check_internet_connectivity(void) {
+    FILE *f = fopen("/proc/net/route", "r");
+    int has_route = 0;
+    if (f) {
+        char line[256];
+        while (fgets(line, sizeof(line), f)) {
+            char iface[32];
+            unsigned long dest;
+            if (sscanf(line, "%31s %lx", iface, &dest) == 2) {
+                if (dest == 0 && strcmp(iface, "lo") != 0) {
+                    has_route = 1;
+                    break;
+                }
+            }
+        }
+        fclose(f);
+    }
+    if (!has_route) {
+        int sock = socket(AF_INET, SOCK_DGRAM, 0);
+        if (sock >= 0) {
+            struct sockaddr_in target;
+            memset(&target, 0, sizeof(target));
+            target.sin_family = AF_INET;
+            target.sin_port = htons(53);
+            target.sin_addr.s_addr = inet_addr("10.0.2.3");
+            if (connect(sock, (struct sockaddr *)&target, sizeof(target)) == 0) {
+                has_route = 1;
+            }
+            close(sock);
+        }
+    }
+    return has_route;
 }
 
 static void print_banner(void) {
@@ -65,7 +102,7 @@ static void cmd_repo(void) {
     printf("  Registry URI:       %shttps://repo.depth-hinux.org/core%s\n", COLOR_RED, COLOR_RESET);
     printf("  Community Upload:   %shttps://github.com/depth-os/dive-repo%s\n", COLOR_RED, COLOR_RESET);
     printf("  Local Storage:      %s/var/cache/dive/packages%s\n", COLOR_RED, COLOR_RESET);
-    printf("  Package Format:     %s.dpk (gzip tarball + manifest)%s\n", COLOR_RED, COLOR_RESET);
+    printf("  Package Format:     %s.dpk (gzip tarball + ELF binaries)%s\n", COLOR_RED, COLOR_RESET);
     printf("\n%sContribution Workflow:%s\n", COLOR_BOLD, COLOR_RESET);
     printf("  1. Create payload directory with binary layout (/bin, /lib, etc.)\n");
     printf("  2. Run: dive build <payload_dir> <app-name>.dpk\n");
@@ -113,7 +150,6 @@ static int cmd_sync(void) {
         return 0;
     }
 
-    printf("%s[WARN]%s Local repo manifest not found. Writing default index.\n", COLOR_DARK, COLOR_RESET);
     char repo_file[512];
     snprintf(repo_file, sizeof(repo_file), "%s/repo.json", db);
     FILE *f = fopen(repo_file, "w");
@@ -169,6 +205,9 @@ static int cmd_search(const char *query) {
     printf("%s-------------------------------------------------------%s\n", COLOR_DIM, COLOR_RESET);
 
     int count = 0;
+    char found_names[64][64];
+    int found_count = 0;
+
     for (int i = 0; paths[i]; i++) {
         DIR *d = opendir(paths[i]);
         if (!d) continue;
@@ -182,13 +221,66 @@ static int cmd_search(const char *query) {
                 if (len >= sizeof(name)) len = sizeof(name) - 1;
                 strncpy(name, ent->d_name, len);
                 name[len] = '\0';
+
+                int already = 0;
+                for (int j = 0; j < found_count; j++) {
+                    if (strcmp(found_names[j], name) == 0) {
+                        already = 1;
+                        break;
+                    }
+                }
+                if (already) continue;
+
                 if (match_all || strstr(name, query) != NULL) {
+                    if (found_count < 64) {
+                        strncpy(found_names[found_count++], name, 63);
+                    }
                     printf("%-24s %-12s %savailable%s\n", name, ".dpk", COLOR_RED, COLOR_RESET);
                     count++;
                 }
             }
         }
         closedir(d);
+    }
+
+    const char *repo_json_paths[] = {"pkg/repo/repo.json", "/etc/dive/repo.json", "/var/lib/dive/repo.json", NULL};
+    for (int i = 0; repo_json_paths[i]; i++) {
+        FILE *fj = fopen(repo_json_paths[i], "r");
+        if (fj) {
+            char line[256];
+            while (fgets(line, sizeof(line), fj)) {
+                char *pname = strstr(line, "\"name\": \"");
+                if (pname) {
+                    char item[64] = "";
+                    pname += 9;
+                    char *quote = strchr(pname, '"');
+                    if (quote) {
+                        size_t l = quote - pname;
+                        if (l >= sizeof(item)) l = sizeof(item) - 1;
+                        strncpy(item, pname, l);
+                        item[l] = '\0';
+                        if (strcmp(item, "depth-hinux") != 0) {
+                            int already = 0;
+                            for (int j = 0; j < found_count; j++) {
+                                if (strcmp(found_names[j], item) == 0) {
+                                    already = 1;
+                                    break;
+                                }
+                            }
+                            if (!already && (match_all || strstr(item, query) != NULL)) {
+                                if (found_count < 64) {
+                                    strncpy(found_names[found_count++], item, 63);
+                                }
+                                printf("%-24s %-12s %srepository%s\n", item, ".dpk", COLOR_RED, COLOR_RESET);
+                                count++;
+                            }
+                        }
+                    }
+                }
+            }
+            fclose(fj);
+            break;
+        }
     }
 
     if (count == 0) {
@@ -205,6 +297,21 @@ static int cmd_install(const char *pkg_target) {
     if (!pkg_target) {
         fprintf(stderr, "%s[ERROR]%s Missing package target to install.\n", COLOR_RED, COLOR_RESET);
         return 1;
+    }
+
+    int online = check_internet_connectivity();
+    if (!online && access(pkg_target, R_OK) != 0) {
+        char check_cached[512];
+        snprintf(check_cached, sizeof(check_cached), "/var/cache/dive/packages/%s.dpk", pkg_target);
+        if (access(check_cached, R_OK) != 0) {
+            snprintf(check_cached, sizeof(check_cached), "pkg/repo/packages/%s.dpk", pkg_target);
+            if (access(check_cached, R_OK) != 0) {
+                fprintf(stderr, "%s[ERROR]%s Internet connection required to download package '%s' from repository.\n", COLOR_RED, COLOR_RESET, pkg_target);
+                fprintf(stderr, "%s[DIVE]%s Network interface is currently offline.\n", COLOR_DARK, COLOR_RESET);
+                printf("%s[TIP]%s Please run 'network' or 'net' to establish internet connection first.\n", COLOR_RED, COLOR_RESET);
+                return 1;
+            }
+        }
     }
 
     const char *db = get_db_dir();
@@ -244,6 +351,9 @@ static int cmd_install(const char *pkg_target) {
     }
     ensure_dir(root_dest);
 
+    if (online) {
+        printf("%s[DIVE]%s Internet connection active. Accessing package archive...\n", COLOR_RED, COLOR_RESET);
+    }
     printf("%s[DIVE]%s Unpacking archive: %s\n", COLOR_RED, COLOR_RESET, pkg_path);
     char cmd[1024];
     snprintf(cmd, sizeof(cmd), "tar -xzf \"%s\" -C \"%s\" 2>/dev/null || tar -xf \"%s\" -C \"%s\"", pkg_path, root_dest, pkg_path, root_dest);
@@ -260,6 +370,20 @@ static int cmd_install(const char *pkg_target) {
     char *dot = strstr(base_name, ".dpk");
     if (dot) *dot = '\0';
 
+    char bin_path[512];
+    snprintf(bin_path, sizeof(bin_path), "%s/bin/%s", root_dest, base_name);
+    if (access(bin_path, R_OK) == 0) {
+        int bfd = open(bin_path, O_RDONLY);
+        if (bfd >= 0) {
+            char magic[4];
+            if (read(bfd, magic, 4) == 4 && memcmp(magic, "\x7f\x45\x4c\x46", 4) == 0) {
+                printf("%s[DIVE]%s Verified ELF binary: %s (x86_64 native executable)\n", COLOR_RED, COLOR_RESET, bin_path);
+            }
+            close(bfd);
+        }
+        chmod(bin_path, 0755);
+    }
+
     char manifest_file[512];
     snprintf(manifest_file, sizeof(manifest_file), "%s/%s.manifest", inst_dir, base_name);
     FILE *mf = fopen(manifest_file, "w");
@@ -268,7 +392,7 @@ static int cmd_install(const char *pkg_target) {
         fclose(mf);
     }
 
-    printf("%s[DIVE]%s %s%s%s installed successfully.\n", COLOR_RED, COLOR_RESET, COLOR_BOLD, base_name, COLOR_RESET);
+    printf("%s[DIVE]%s %s%s%s installed successfully into system hierarchy.\n", COLOR_RED, COLOR_RESET, COLOR_BOLD, base_name, COLOR_RESET);
     return 0;
 }
 

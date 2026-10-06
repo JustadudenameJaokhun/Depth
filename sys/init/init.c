@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <time.h>
 #include <sys/mount.h>
 #include <sys/wait.h>
 #include <sys/reboot.h>
@@ -11,12 +12,6 @@
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 #include <termios.h>
-
-#define COLOR_RED "\033[38;2;230;25;25m"
-#define COLOR_DARK "\033[38;2;140;20;20m"
-#define COLOR_DIM "\033[38;2;100;100;100m"
-#define COLOR_BOLD "\033[1m"
-#define COLOR_RESET "\033[0m"
 
 static void setup_console(void) {
     setsid();
@@ -59,32 +54,18 @@ static void setup_console(void) {
     }
 }
 
-static void print_banner(void) {
-    printf("%s%s", COLOR_BOLD, COLOR_RED);
-    printf("    ███▄\n");
-    printf("    ██████▄\n");
-    printf("    █████████▄\n");
-    printf("    ████████████▄\n");
-    printf("    ██████████████▄\n");
-    printf("    ███████████████▌     DEPTH HINUX [x86_64]\n");
-    printf("    ███████████████▌     Dimensions Node | Bedrock Architecture\n");
-    printf("    ██████████████▀      86.6%% Pure ASM Core | Zero GNU Bloat\n");
-    printf("    ████████████▀        Kernel: Linux ABI | Toolset: Hinux Native\n");
-    printf("    █████████▀           Raw Silicon. Built From Scratch.\n");
-    printf("    ██████▀\n");
-    printf("    ███▀\n");
-    printf("%s\n", COLOR_RESET);
-}
-
-static void spawn_cmd(const char *path, char *const argv[]) {
-    pid_t pid = fork();
-    if (pid == 0) {
-        execv(path, argv);
-        exit(1);
-    } else if (pid > 0) {
-        int st;
-        waitpid(pid, &st, 0);
+static void print_welcome(void) {
+    time_t t = time(NULL);
+    struct tm *tm_info = localtime(&t);
+    char time_str[64];
+    if (tm_info) {
+        strftime(time_str, sizeof(time_str), "%H:%M:%S", tm_info);
+    } else {
+        snprintf(time_str, sizeof(time_str), "12:00:00");
     }
+    printf("Welcome To Depth!\n");
+    printf("%s \033[40m   \033[41m   \033[42m   \033[43m   \033[44m   \033[45m   \033[46m   \033[47m   \033[0m\n", time_str);
+    fflush(stdout);
 }
 
 int main(void) {
@@ -133,38 +114,63 @@ int main(void) {
     }
 
     setup_console();
-    print_banner();
+    print_welcome();
 
-    printf("%s[HINUX INIT]%s Testing standalone pure ASM binaries...\n", COLOR_RED, COLOR_RESET);
-    char *echo_args[] = {"/bin/echo", "Depth Hinux pure ASM echo operational on bare metal.", NULL};
-    spawn_cmd("/bin/echo", echo_args);
-
-    if (access("/bin/fastfetch", X_OK) == 0) {
-        printf("\n%s[HINUX INIT]%s Launching Fastfetch System Telemetry...\n", COLOR_RED, COLOR_RESET);
-        char *ff_args[] = {"/bin/fastfetch", "-c", "/etc/fastfetch/config.jsonc", NULL};
-        spawn_cmd("/bin/fastfetch", ff_args);
-    }
-
-    printf("\n%s[HINUX INIT]%s Starting bedrock interactive shell...\n", COLOR_RED, COLOR_RESET);
-    setenv("PATH", "/bin:/usr/bin", 1);
+    setenv("PATH", "/bin:/sbin:/usr/bin:/usr/sbin", 1);
     setenv("HOME", "/root", 1);
     setenv("USER", "root", 1);
     setenv("LOGNAME", "root", 1);
     setenv("HOSTNAME", "dimensions", 1);
     setenv("TERM", "linux", 1);
-    setenv("PS1", "\033[38;2;230;25;25mdepth-hinux\033[0m:\033[38;2;140;20;20m~#\033[0m ", 1);
+    setenv("PS1", "depth-hinux ~/ ", 1);
 
-    pid_t shell_pid = fork();
-    if (shell_pid == 0) {
-        char *sh_args[] = {"/bin/sh", NULL};
-        execv("/bin/sh", sh_args);
-        exit(1);
-    } else if (shell_pid > 0) {
-        int status;
-        waitpid(shell_pid, &status, 0);
+    FILE *fprof = fopen("/etc/profile", "w");
+    if (fprof) {
+        fputs("export PATH=/bin:/sbin:/usr/bin:/usr/sbin\n", fprof);
+        fputs("export HOME=/root\n", fprof);
+        fputs("export PS1=\"depth-hinux ~/ \"\n", fprof);
+        fputs("export TERM=linux\n", fprof);
+        fclose(fprof);
     }
 
-    printf("\n%s[HINUX INIT]%s Shell session terminated. Powering off system.\n", COLOR_RED, COLOR_RESET);
+    FILE *fmode = fopen("/etc/depth-mode", "r");
+    char mode_buf[32] = "";
+    if (fmode) {
+        if (fgets(mode_buf, sizeof(mode_buf), fmode)) {
+            char *nl = strchr(mode_buf, '\n');
+            if (nl) *nl = '\0';
+        }
+        fclose(fmode);
+    }
+
+    if (strcmp(mode_buf, "glare") == 0 && access("/bin/glare", X_OK) == 0) {
+        pid_t glare_pid = fork();
+        if (glare_pid == 0) {
+            char *glare_args[] = {"/bin/glare", NULL};
+            execv("/bin/glare", glare_args);
+            exit(1);
+        } else if (glare_pid > 0) {
+            int status;
+            waitpid(glare_pid, &status, 0);
+        }
+    }
+
+    while (1) {
+        pid_t shell_pid = fork();
+        if (shell_pid == 0) {
+            char *sh_args[] = {"/bin/sh", NULL};
+            execv("/bin/sh", sh_args);
+            exit(1);
+        } else if (shell_pid > 0) {
+            int status;
+            waitpid(shell_pid, &status, 0);
+        }
+        if (access("/tmp/poweroff", F_OK) == 0 || access("/tmp/shutdown", F_OK) == 0) {
+            break;
+        }
+        printf("\n[HINUX] Shell session closed. Type 'shutdown' to halt Depth Hinux.\n\n");
+    }
+
     sync();
     reboot(RB_POWER_OFF);
     return 0;
