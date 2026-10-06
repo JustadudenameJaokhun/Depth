@@ -43,6 +43,10 @@ printf "root:\$6\$W/s2mWJtU2KDanVG\$AxeYjt/g9d/qubvOm3eYCQikRlC2zaNLCF6RGeFiXkqi
 MODE_VAL="${MODE:-bare}"
 printf "%s\n" "$MODE_VAL" > "$STAGING"/etc/depth-mode
 
+if [ "$MODE_VAL" = "glare" ]; then
+    tar -xzf /home/jaokhun/Projects/Depth/pkg/repo/packages/cinnamon.dpk -C "$STAGING" 2>/dev/null || true
+fi
+
 mkdir -p "$STAGING"/lib/modules
 cp -f /home/jaokhun/Projects/Depth/boot/modules/e1000.ko "$STAGING"/lib/modules/ 2>/dev/null || true
 

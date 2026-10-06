@@ -28,7 +28,8 @@ ASM_OBJS = $(BUILD_DIR)/string.o $(BUILD_DIR)/mem.o $(BUILD_DIR)/io.o \
            $(BUILD_DIR)/glare_raster.o $(BUILD_DIR)/glare_events.o \
            $(BUILD_DIR)/glare_widgets.o $(BUILD_DIR)/vfs_ext.o \
            $(BUILD_DIR)/glare_theme.o $(BUILD_DIR)/glare_draw_fast.o \
-           $(BUILD_DIR)/glare_fx.o $(BUILD_DIR)/glare_terminal.o $(BUILD_DIR)/glare_layout.o
+           $(BUILD_DIR)/glare_fx.o $(BUILD_DIR)/glare_terminal.o $(BUILD_DIR)/glare_layout.o \
+           $(BUILD_DIR)/cinnamon_theme.o $(BUILD_DIR)/cinnamon_panel.o
 
 all: $(BIN_DIR) $(BUILD_DIR) $(COREUTILS) $(ASM_OBJS)
 

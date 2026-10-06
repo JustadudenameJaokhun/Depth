@@ -26,6 +26,13 @@
       "file": "fastfetch.dpk"
     },
     {
+      "name": "cinnamon",
+      "version": "6.6.9",
+      "arch": "x86_64",
+      "description": "Cinnamon Desktop Environment for Glare edition with Muffin and Nemo",
+      "file": "cinnamon.dpk"
+    },
+    {
       "name": "firefox",
       "version": "156.0",
       "arch": "x86_64",
