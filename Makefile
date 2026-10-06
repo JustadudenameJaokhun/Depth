@@ -27,8 +27,7 @@ build:
 build-target:
 	$(MAKE) -C sys
 	$(MAKE) -C sys/kernel
-	nasm -f elf64 sys/asm/glare_font.asm -o sys/build/glare_font.o
-	gcc -O2 -s -o sys/bin/glare sys/glare/glare.c sys/build/glare_font.o
+	gcc -O2 -s -o sys/bin/glare sys/glare/glare.c
 	gcc -static -O2 -s -o pkg/dive pkg/dive.c
 	gcc -static -O2 -s -o sys/init/init sys/init/init.c
 	gcc -O2 -s -o installer/depth-install installer/depth-install.c
@@ -44,18 +43,11 @@ build-target:
 	printf "pref(\"browser.startup.homepage\", \"https://depth-hinux.org/welcome\");\n" > /tmp/ff_pkg/etc/firefox/firefox.conf
 	tar -czf pkg/repo/packages/firefox.dpk -C /tmp/ff_pkg .
 	rm -rf /tmp/ff_pkg /tmp/firefox_bin
-	gcc -O2 -s -o /tmp/cinnamon_bin pkg/src/cinnamon/cinnamon_launcher.c
-	mkdir -p /tmp/cin_pkg/bin /tmp/cin_pkg/usr/bin /tmp/cin_pkg/usr/share/xsessions /tmp/cin_pkg/etc/cinnamon
-	cp -f /tmp/cinnamon_bin /tmp/cin_pkg/bin/cinnamon
-	cp -f /tmp/cinnamon_bin /tmp/cin_pkg/bin/cinnamon-session
-	cp -f /tmp/cinnamon_bin /tmp/cin_pkg/bin/nemo
-	chmod +x /tmp/cin_pkg/bin/*
-	ln -sf /bin/cinnamon /tmp/cin_pkg/usr/bin/cinnamon
-	ln -sf /bin/cinnamon-session /tmp/cin_pkg/usr/bin/cinnamon-session
-	cp -f /usr/share/xsessions/cinnamon.desktop /tmp/cin_pkg/usr/share/xsessions/ 2>/dev/null || true
+	mkdir -p /tmp/cin_pkg/usr/share/xsessions /tmp/cin_pkg/etc/cinnamon
+	cp -f /usr/share/xsessions/cinnamon*.desktop /tmp/cin_pkg/usr/share/xsessions/ 2>/dev/null || true
 	printf "[cinnamon]\ntheme=Mint-Y-Dark\nwindow_manager=muffin\nfile_manager=nemo\npanel_position=bottom\n" > /tmp/cin_pkg/etc/cinnamon/cinnamon.conf
 	tar -czf pkg/repo/packages/cinnamon.dpk -C /tmp/cin_pkg .
-	rm -rf /tmp/cin_pkg /tmp/cinnamon_bin
+	rm -rf /tmp/cin_pkg
 	MODE=$(MODE) sh boot/build-initrd.sh
 
 iso: build
@@ -67,7 +59,7 @@ run-kernel: kernel
 		-kernel sys/kernel/hinux-kernel.bin \
 		-vga std \
 		-serial stdio \
-		-m 512M \
+		-m 1024M \
 		-no-reboot
 
 run:
@@ -78,8 +70,10 @@ run:
 		-append "console=ttyS0 console=tty0 loglevel=7 ignore_loglevel net.ifnames=0 biosdevname=0 panic=1 rdinit=/init" \
 		-netdev user,id=net0 \
 		-device e1000,netdev=net0 \
+		-usb \
+		-device usb-tablet \
 		-vga std \
-		-m 512M \
+		-m 3072M \
 		-no-reboot
 
 run-iso: iso
@@ -89,8 +83,10 @@ run-iso: iso
 		-boot d \
 		-netdev user,id=net0 \
 		-device e1000,netdev=net0 \
+		-usb \
+		-device usb-tablet \
 		-vga std \
-		-m 512M \
+		-m 3072M \
 		-no-reboot
 
 run-cli:
@@ -102,7 +98,7 @@ run-cli:
 		-netdev user,id=net0 \
 		-device e1000,netdev=net0 \
 		-nographic \
-		-m 512M \
+		-m 3072M \
 		-no-reboot
 
 clean:

@@ -12,6 +12,7 @@
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 #include <termios.h>
+#include <errno.h>
 
 static void setup_console(void) {
     setsid();
@@ -89,6 +90,12 @@ int main(void) {
         close(mod_fd);
     }
 
+    int drm_fd = open("/lib/modules/bochs.ko", O_RDONLY);
+    if (drm_fd >= 0) {
+        syscall(SYS_finit_module, drm_fd, "", 0);
+        close(drm_fd);
+    }
+
     sethostname("dimensions", 10);
 
     FILE *fhost = fopen("/etc/hostname", "w");
@@ -99,8 +106,14 @@ int main(void) {
 
     FILE *fpw = fopen("/etc/passwd", "w");
     if (fpw) {
-        fputs("root:x:0:0:root:/root:/bin/sh\n", fpw);
+        fputs("root:x:0:0:root:/root:/bin/sh\ndbus:x:81:81:System Message Bus:/:/usr/bin/nologin\n", fpw);
         fclose(fpw);
+    }
+
+    FILE *fgrp = fopen("/etc/group", "w");
+    if (fgrp) {
+        fputs("root:x:0:\ndbus:x:81:\n", fgrp);
+        fclose(fgrp);
     }
 
     FILE *fsh = fopen("/etc/shadow", "w");
@@ -114,6 +127,12 @@ int main(void) {
         fputs("nameserver 10.0.2.3\nnameserver 1.1.1.1\nnameserver 8.8.8.8\n", fresolv);
         fclose(fresolv);
     }
+
+    mkdir("/run/user", 0755);
+    mkdir("/run/user/0", 0700);
+    chown("/run/user", 0, 0);
+    chown("/run/user/0", 0, 0);
+    chmod("/run/user/0", 0700);
 
     setup_console();
     print_welcome();
@@ -139,13 +158,15 @@ int main(void) {
     char mode_buf[32] = "";
     if (fmode) {
         if (fgets(mode_buf, sizeof(mode_buf), fmode)) {
+            char *cr = strchr(mode_buf, '\r');
+            if (cr) *cr = '\0';
             char *nl = strchr(mode_buf, '\n');
             if (nl) *nl = '\0';
         }
         fclose(fmode);
     }
 
-    if (strcmp(mode_buf, "glare") == 0 && access("/bin/glare", X_OK) == 0) {
+    if (strncmp(mode_buf, "glare", 5) == 0 && access("/bin/glare", X_OK) == 0) {
         pid_t glare_pid = fork();
         if (glare_pid == 0) {
             char *glare_args[] = {"/bin/glare", NULL};

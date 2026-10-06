@@ -1,7 +1,10 @@
 mkdir -p /home/jaokhun/Projects/Depth/boot
 STAGING=/tmp/depth_initrd_staging
 rm -rf "$STAGING"
-mkdir -p "$STAGING"/bin "$STAGING"/sbin "$STAGING"/usr/bin "$STAGING"/dev "$STAGING"/proc "$STAGING"/sys "$STAGING"/root "$STAGING"/tmp "$STAGING"/var/lib/dive "$STAGING"/var/cache/dive/packages "$STAGING"/etc/fastfetch "$STAGING"/etc/dive
+mkdir -p "$STAGING"/bin "$STAGING"/sbin "$STAGING"/usr/bin "$STAGING"/usr/lib "$STAGING"/dev "$STAGING"/proc "$STAGING"/sys "$STAGING"/root "$STAGING"/tmp "$STAGING"/var/lib/dive "$STAGING"/var/cache/dive/packages "$STAGING"/etc/fastfetch "$STAGING"/etc/dive
+ln -sf usr/lib "$STAGING"/lib
+ln -sf usr/lib "$STAGING"/lib64
+ln -sf lib "$STAGING"/usr/lib64
 
 cp -f /home/jaokhun/Projects/Depth/sys/init/init "$STAGING"/init
 chmod +x "$STAGING"/init
@@ -17,8 +20,6 @@ chmod +x "$STAGING"/bin/depthinstall "$STAGING"/usr/bin/depthinstall
 
 ln -sf /bin/shutdown "$STAGING"/sbin/shutdown
 ln -sf /bin/shutdown "$STAGING"/bin/poweroff
-ln -sf /bin/glare "$STAGING"/bin/cinnamon
-ln -sf /bin/glare "$STAGING"/bin/cinnamon-session
 ln -sf /bin/glare "$STAGING"/bin/desktop
 ln -sf /bin/glare "$STAGING"/bin/startx
 
@@ -26,12 +27,15 @@ cp -f /home/jaokhun/Projects/Depth/pkg/dive "$STAGING"/bin/dive
 cp -f /home/jaokhun/Projects/Depth/pkg/dive "$STAGING"/usr/bin/dive
 chmod +x "$STAGING"/bin/dive "$STAGING"/usr/bin/dive
 
-cp -f /usr/bin/sh "$STAGING"/bin/sh
+cp -f /usr/bin/bash "$STAGING"/bin/bash
+ln -sf /bin/bash "$STAGING"/bin/sh
+ln -sf /bin/bash "$STAGING"/usr/bin/bash
+ln -sf /bin/bash "$STAGING"/usr/bin/sh
 cp -f /usr/bin/fastfetch "$STAGING"/bin/fastfetch
 cp -f /usr/bin/ip "$STAGING"/bin/ip 2>/dev/null || true
 cp -f /usr/bin/tar "$STAGING"/bin/tar 2>/dev/null || true
 cp -f /usr/bin/gzip "$STAGING"/bin/gzip 2>/dev/null || true
-chmod +x "$STAGING"/bin/fastfetch "$STAGING"/bin/sh "$STAGING"/bin/ip "$STAGING"/bin/tar "$STAGING"/bin/gzip
+chmod +x "$STAGING"/bin/fastfetch "$STAGING"/bin/bash "$STAGING"/bin/ip "$STAGING"/bin/tar "$STAGING"/bin/gzip
 
 cp -f /home/jaokhun/Projects/Depth/pkg/repo/recipes/fastfetch.json "$STAGING"/etc/fastfetch/config.jsonc
 cp -f /home/jaokhun/Projects/Depth/pkg/repo/recipes/depth_logo.txt "$STAGING"/etc/fastfetch/depth_logo.txt
@@ -41,29 +45,134 @@ cp -f /home/jaokhun/Projects/Depth/pkg/repo/repo.json "$STAGING"/etc/dive/repo.j
 
 printf "dimensions\n" > "$STAGING"/etc/hostname
 printf "nameserver 10.0.2.3\nnameserver 1.1.1.1\nnameserver 8.8.8.8\n" > "$STAGING"/etc/resolv.conf
-printf "root:x:0:0:root:/bin/sh\n" > "$STAGING"/etc/passwd
+printf "root:x:0:0:root:/root:/bin/sh\ndbus:x:81:81:System Message Bus:/:/usr/bin/nologin\npolkitd:x:102:102:PolicyKit Daemon:/:/usr/bin/nologin\navahi:x:84:84:Avahi:/:/usr/bin/nologin\ncolord:x:124:124:Colord:/:/usr/bin/nologin\nsystemd-network:x:192:192:systemd:/:/usr/bin/nologin\nsystemd-oom:x:999:999:systemd:/:/usr/bin/nologin\nsystemd-resolve:x:193:193:systemd:/:/usr/bin/nologin\nsystemd-timesync:x:194:194:systemd:/:/usr/bin/nologin\n" > "$STAGING"/etc/passwd
+printf "root:x:0:\ndbus:x:81:\npolkitd:x:102:\navahi:x:84:\ncolord:x:124:\nnetwork:x:90:\n" > "$STAGING"/etc/group
 printf "root:\$6\$W/s2mWJtU2KDanVG\$AxeYjt/g9d/qubvOm3eYCQikRlC2zaNLCF6RGeFiXkqiNGZhD8.H6FuUVox8V9aIbaBW9vUdUtVcfUfN8bi4/0:19800:0:99999:7:::\n" > "$STAGING"/etc/shadow
 
 MODE_VAL="${MODE:-bare}"
 printf "%s\n" "$MODE_VAL" > "$STAGING"/etc/depth-mode
 
 if [ "$MODE_VAL" = "glare" ]; then
-    tar -xzf /home/jaokhun/Projects/Depth/pkg/repo/packages/cinnamon.dpk -C "$STAGING" 2>/dev/null || true
+    for b in /usr/bin/bwrap /usr/lib/Xorg /usr/bin/Xorg /usr/bin/xkbcomp /usr/bin/cinnamon /usr/bin/cinnamon2d /usr/bin/cinnamon-session /usr/bin/cinnamon-session-cinnamon /usr/bin/cinnamon-session-quit /usr/bin/cinnamon-settings /usr/bin/cinnamon-launcher /usr/bin/cinnamon-killer-daemon /usr/bin/muffin /usr/bin/nemo /usr/bin/nemo-desktop /usr/bin/dbus-daemon /usr/bin/dbus-launch /usr/bin/dbus-uuidgen /usr/bin/python3 /usr/bin/gnome-terminal /usr/bin/cjs /usr/bin/cjs-console /usr/bin/pkill /usr/bin/killall /usr/bin/setxkbmap /usr/bin/xmodmap /usr/bin/xrdb /usr/bin/cinnamon-subprocess-wrapper /usr/lib/libEGL_mesa.so.0 /usr/lib/libGLX_mesa.so.0 /usr/lib/libEGL.so.1 /usr/lib/libGL.so.1 /usr/lib/libGLdispatch.so.0 /usr/lib/gnome-terminal-server /usr/lib/cinnamon-settings-daemon/csd-xsettings /usr/lib/cinnamon-settings-daemon/csd-background; do
+        if [ -f "$b" ]; then
+            td="$STAGING"$(dirname "$b")
+            mkdir -p "$td"
+            cp -f "$b" "$td"/
+            chmod +x "$td"/"$(basename "$b")"
+        fi
+    done
+    mkdir -p "$STAGING"/usr/lib/cinnamon-session
+    cp -af /usr/lib/cinnamon-session/* "$STAGING"/usr/lib/cinnamon-session/ 2>/dev/null || true
+    for d in /usr/lib/xorg/modules /usr/lib/dri /usr/lib/gbm /usr/share/glvnd /usr/share/xkeyboard-config-2 /usr/share/cinnamon /usr/share/cinnamon-session /usr/share/glib-2.0/schemas /usr/lib/cinnamon /usr/lib/cinnamon-settings-daemon /usr/lib/muffin /usr/lib/cjs /usr/lib/gtk-3.0 /usr/lib/xapps /usr/lib/glycin-loaders /usr/share/glycin-loaders /usr/lib/python3.14 /etc/dbus-1 /usr/share/dbus-1 /usr/lib/girepository-1.0 /usr/share/icons/hicolor /usr/share/icons/Adwaita /usr/share/icons/AdwaitaLegacy /usr/share/icons/default /usr/share/applications /usr/share/xsessions /etc/xdg /usr/share/xml/iso-codes /usr/share/mime; do
+        if [ -d "$d" ]; then
+            td="$STAGING"$(dirname "$d")
+            mkdir -p "$td"
+            cp -a "$d" "$td"/ 2>/dev/null || true
+        fi
+    done
+    mkdir -p "$STAGING"/usr/share/X11
+    ln -sf /usr/share/xkeyboard-config-2 "$STAGING"/usr/share/X11/xkb
+    cp -a /etc/fonts "$STAGING"/etc/ 2>/dev/null || true
+    mkdir -p "$STAGING"/usr/share/fonts
+    cp -a /usr/share/fonts/liberation "$STAGING"/usr/share/fonts/ 2>/dev/null || true
+    mkdir -p "$STAGING"/usr/share/themes
+    cp -a /usr/share/themes/Adwaita /usr/share/themes/Adwaita-dark /usr/share/themes/Default "$STAGING"/usr/share/themes/ 2>/dev/null || true
+    printf "[org.nemo.preferences]\ntreat-root-as-normal=true\nshow-desktop-icons=true\n\n[org.nemo.desktop]\nshow-desktop-icons=true\nbackground-fade=false\n\n[org.cinnamon.desktop.background]\npicture-options='none'\nprimary-color='#1a1b26'\nsecondary-color='#1a1b26'\ncolor-shading-type='solid'\n\n[org.cinnamon.desktop.interface]\nicon-theme='Adwaita'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon]\napp-menu-label='Depth'\napp-menu-icon-name='cinnamon-symbolic'\n\n[org.cinnamon.theme]\nname='Default'\n" > "$STAGING"/usr/share/glib-2.0/schemas/99_depth.gschema.override
+    glib-compile-schemas "$STAGING"/usr/share/glib-2.0/schemas/ 2>/dev/null || true
+    mkdir -p "$STAGING"/root/.config/cinnamon/spices/menu@cinnamon.org
+    printf '{"menu-custom":{"type":"switch","default":false,"value":true},"menu-label":{"type":"entry","default":"Menu","value":"Depth"},"menu-icon":{"type":"iconfilechooser","default":"cinnamon-symbolic","value":"cinnamon-symbolic"}}\n' > "$STAGING"/root/.config/cinnamon/spices/menu@cinnamon.org/0.json
+    mkdir -p "$STAGING"/tmp/.X11-unix "$STAGING"/run/user/0 "$STAGING"/var/run/dbus "$STAGING"/var/lib/dbus "$STAGING"/etc/X11
+    chmod 1777 "$STAGING"/tmp/.X11-unix
+    printf "d3b07384d113edec49eaa6238ad5ff00\n" > "$STAGING"/etc/machine-id
+    ln -sf /etc/machine-id "$STAGING"/var/lib/dbus/machine-id
+    ln -sf /usr/bin/cinnamon "$STAGING"/bin/cinnamon
+    ln -sf /usr/bin/cinnamon-session "$STAGING"/bin/cinnamon-session
+    ln -sf /usr/bin/cinnamon2d "$STAGING"/bin/cinnamon2d
+    ln -sf /usr/bin/muffin "$STAGING"/bin/muffin
+    ln -sf /usr/bin/nemo "$STAGING"/bin/nemo
+    cat << 'EOF' > "$STAGING"/etc/X11/xorg.conf
+Section "Device"
+    Identifier "Card0"
+    Driver "modesetting"
+    Option "AccelMethod" "none"
+    Option "ShadowFB" "true"
+EndSection
+
+Section "Screen"
+    Identifier "Screen0"
+    Device "Card0"
+    DefaultDepth 24
+    SubSection "Display"
+        Depth 24
+        Modes "1024x768"
+    EndSubSection
+EndSection
+EOF
 fi
 
-mkdir -p "$STAGING"/lib/modules
-cp -f /home/jaokhun/Projects/Depth/boot/modules/e1000.ko "$STAGING"/lib/modules/ 2>/dev/null || true
+mkdir -p "$STAGING"/usr/lib/modules
+cp -f /home/jaokhun/Projects/Depth/boot/modules/e1000.ko "$STAGING"/usr/lib/modules/ 2>/dev/null || true
+cp -f /home/jaokhun/Projects/Depth/boot/modules/bochs.ko "$STAGING"/usr/lib/modules/ 2>/dev/null || true
 
-mkdir -p "$STAGING"/lib "$STAGING"/lib64 "$STAGING"/usr/lib "$STAGING"/usr/lib64
+python3 - << 'PYEOF'
+import os, glob, subprocess, re
 
-for lib in $(ldd /usr/bin/sh /usr/bin/fastfetch /usr/bin/ip /usr/bin/tar /usr/bin/gzip /home/jaokhun/Projects/Depth/sys/bin/glare 2>/dev/null | grep -o '/[^ ]*' | sort -u); do
-    if [ -f "$lib" ]; then
-        target_dir="$STAGING"$(dirname "$lib")
-        mkdir -p "$target_dir"
-        cp -f "$lib" "$target_dir"/ 2>/dev/null || true
-    fi
-done
+staging = "/tmp/depth_initrd_staging"
+cinnamon_libs = [
+    "libibus-1.0.so.5", "libaccountsservice.so.1", "libxapp.so.1",
+    "libgcr-base-3.so.1", "libgcr-ui-3.so.1", "libnotify.so.4",
+    "libpolkit-agent-1.so.0", "libpolkit-gobject-1.so.0", "libupower-glib.so.3",
+    "libnm.so.0", "libnma.so.0", "libtimezonemap.so.1"
+]
+for l in cinnamon_libs:
+    src = os.path.join("/usr/lib", l)
+    if os.path.isfile(src):
+        dst = os.path.join(staging, "usr/lib", l)
+        if not os.path.exists(dst):
+            subprocess.call(["cp", "-f", src, dst])
+
+scanned = set()
+while True:
+    new_libs = set()
+    for root, dirs, files in os.walk(staging):
+        for f in files:
+            p = os.path.join(root, f)
+            if p in scanned or os.path.islink(p):
+                continue
+            if not (os.access(p, os.X_OK) or f.endswith(".so") or ".so." in f):
+                continue
+            scanned.add(p)
+            try:
+                out = subprocess.check_output(["ldd", p], stderr=subprocess.DEVNULL).decode()
+                for line in out.splitlines():
+                    if "=>" in line:
+                        target = line.split("=>")[1].strip().split(" ")[0]
+                        if target.startswith("/") and os.path.isfile(target):
+                            new_libs.add(target)
+                    elif line.strip().startswith("/"):
+                        target = line.strip().split(" ")[0]
+                        if os.path.isfile(target):
+                            new_libs.add(target)
+            except:
+                pass
+    to_copy = [lib for lib in new_libs if not os.path.exists(os.path.join(staging, lib.lstrip("/")))]
+    if not to_copy:
+        break
+    for lib in to_copy:
+        dest = os.path.join(staging, lib.lstrip("/"))
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        subprocess.call(["cp", "-f", lib, dest])
+
+for src_ld in ["/lib64/ld-linux-x86-64.so.2", "/usr/lib/ld-linux-x86-64.so.2"]:
+    if os.path.exists(src_ld):
+        dest = os.path.join(staging, "usr/lib/ld-linux-x86-64.so.2")
+        subprocess.call(["cp", "-f", src_ld, dest])
+        break
+PYEOF
+
+printf "/usr/lib\n/usr/lib64\n/lib\n/lib64\n/usr/lib/cinnamon\n/usr/lib/muffin\n/usr/lib/cjs\n" > "$STAGING"/etc/ld.so.conf
+ldconfig -r "$STAGING" 2>/dev/null || true
 
 cd "$STAGING"
-find . -print0 | cpio --null --create --format=newc | gzip -9 > /home/jaokhun/Projects/Depth/boot/depth-bare-initrd.img
+find . -print0 | cpio --null --create --format=newc | gzip -1 > /home/jaokhun/Projects/Depth/boot/depth-bare-initrd.img
 rm -rf "$STAGING"
