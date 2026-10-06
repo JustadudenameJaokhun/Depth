@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="powerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF4D4D" />
+      <stop offset="100%" stop-color="#A80B0B" />
+    </linearGradient>
+    <filter id="pGlow">
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#E61919" flood-opacity="0.8" />
+    </filter>
+  </defs>
+  <rect x="12" y="12" width="104" height="104" rx="24" fill="#0D0D12" stroke="#330808" stroke-width="2" />
+  <path d="M 46 38 A 32 32 0 1 0 82 38" fill="none" stroke="url(#powerGrad)" stroke-width="7" stroke-linecap="round" filter="url(#pGlow)" />
+  <rect x="60.5" y="22" width="7" height="30" rx="3.5" fill="#FF4D4D" filter="url(#pGlow)" />
+</svg>

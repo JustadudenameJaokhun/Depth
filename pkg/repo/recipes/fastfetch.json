@@ -1,0 +1,30 @@
+{
+  "logo": {
+    "type": "file",
+    "source": "/etc/fastfetch/depth_logo.txt"
+  },
+  "modules": [
+    {
+      "type": "title",
+      "format": "root@dimensions"
+    },
+    "separator",
+    {
+      "type": "os",
+      "format": "Depth Hinux (Bedrock Edition)"
+    },
+    {
+      "type": "kernel",
+      "format": "6.8.0-hinux-rt (x86_64)"
+    },
+    "uptime",
+    {
+      "type": "shell",
+      "format": "Hinux Native Shell (86.6% Pure ASM)"
+    },
+    "cpu",
+    "memory",
+    "break",
+    "colors"
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "name": "depth-hinux",
+  "version": "1.0.0",
+  "architecture": "hinux-x86_64",
+  "registry": "https://repo.depth-hinux.org/core",
+  "packages": [
+    {
+      "name": "depth-base",
+      "version": "1.0.0",
+      "arch": "x86_64",
+      "description": "Pure x86-64 assembly Hinux system core utilities and bedrock syscall layer (86.6% ASM)",
+      "file": "depth-base.dpk"
+    },
+    {
+      "name": "depth-sh",
+      "version": "1.0.0",
+      "arch": "x86_64",
+      "description": "Bedrock shell environment with dimensions node prompt",
+      "file": "depth-sh.dpk"
+    },
+    {
+      "name": "fastfetch",
+      "version": "2.68.1",
+      "arch": "x86_64",
+      "description": "Hinux system information telemetry with solid triangle D logo",
+      "file": "fastfetch.dpk"
+    },
+    {
+      "name": "google-chrome",
+      "version": "128.0.0",
+      "arch": "x86_64",
+      "description": "Web navigation engine and modern internet client",
+      "file": "google-chrome.dpk"
+    },
+    {
+      "name": "nano",
+      "version": "8.0",
+      "arch": "x86_64",
+      "description": "Lightweight bedside console text editor",
+      "file": "nano.dpk"
+    },
+    {
+      "name": "curl",
+      "version": "8.7.1",
+      "arch": "x86_64",
+      "description": "Command line HTTP/HTTPS transfer client",
+      "file": "curl.dpk"
+    },
+    {
+      "name": "rare-desktop",
+      "version": "1.0.0",
+      "arch": "x86_64",
+      "description": "Depth Rare Linux Mint-style desktop suite, panel, menu, and handcrafted vector icons",
+      "file": "rare-desktop.dpk"
+    }
+  ]
+}

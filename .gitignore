@@ -1,0 +1,11 @@
+sys/build/
+sys/bin/
+pkg/dive
+sys/init/init
+installer/depth-install
+boot/*.img
+boot/*.iso
+*.ppm
+*.o
+*.pyc
+__pycache__/

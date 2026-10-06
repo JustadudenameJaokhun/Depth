@@ -1,0 +1,24 @@
+{
+  "edition": "Depth Rare",
+  "codename": "Mint Abyss",
+  "version": "1.0.0",
+  "interface": "gui",
+  "style": "linux-mint-intuitive",
+  "palette": {
+    "accent_primary": "#E61919",
+    "accent_deep": "#8B0000",
+    "background_base": "#0A0A0C",
+    "background_card": "#141418",
+    "border": "#2E0808",
+    "text_primary": "#F0F0F5",
+    "text_muted": "#8A8A96"
+  },
+  "desktop_suite": {
+    "panel": "rare-panel",
+    "launcher": "rare-menu",
+    "file_manager": "rare-files",
+    "software_center": "rare-store",
+    "settings_hub": "rare-settings"
+  },
+  "icon_theme": "depth-vectors"
+}

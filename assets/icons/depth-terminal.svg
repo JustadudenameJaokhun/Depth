@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="termBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181E" />
+      <stop offset="100%" stop-color="#08080A" />
+    </linearGradient>
+    <linearGradient id="termBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C01212" />
+      <stop offset="100%" stop-color="#3D0606" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect x="10" y="14" width="108" height="100" rx="16" fill="url(#termBg)" stroke="url(#termBorder)" stroke-width="2.5" />
+  <rect x="10" y="14" width="108" height="24" rx="16" fill="#120505" />
+  <rect x="10" y="26" width="108" height="12" fill="#120505" />
+  <circle cx="24" cy="26" r="4" fill="#E61919" />
+  <circle cx="36" cy="26" r="4" fill="#6B0505" />
+  <circle cx="48" cy="26" r="4" fill="#2E0404" />
+  <line x1="10" y1="38" x2="118" y2="38" stroke="#2B0A0A" stroke-width="1.5" />
+  <path d="M28 54 L44 68 L28 82" fill="none" stroke="#E61919" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)" />
+  <line x1="52" y1="82" x2="72" y2="82" stroke="#FF4D4D" stroke-width="5" stroke-linecap="round" filter="url(#glow)" />
+  <text x="80" y="66" fill="#7A1515" font-family="monospace" font-size="14" font-weight="bold">ASM</text>
+  <text x="80" y="82" fill="#4A0D0D" font-family="monospace" font-size="12">ELF64</text>
+</svg>
