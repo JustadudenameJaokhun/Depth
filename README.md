@@ -6,8 +6,8 @@
     █████████▄   Dimensions Node | Bedrock Architecture
     ████████████▄
     ██████████████▄
-    ███████████████▌     Pure x86-64 ASM Core | Zero GNU Bloat
-    ███████████████▌     Kernel: Linux ABI | Toolset: Hinux Native
+    ███████████████▌     88.1% Pure ASM Core | Zero GNU Bloat
+    ███████████████▌     Kernel: Hinux ASM Microvisor & Linux ABI
     ██████████████▀      Raw Silicon. Built From Scratch.
     ████████████▀
     █████████▀
@@ -15,20 +15,26 @@
     ███▀
 ```
 
-Depth Hinux is an open-source bedrock operating system engineered from raw silicon. It pairs the 64-bit Linux kernel ABI with a custom, high-performance x86-64 assembly system layer, completely eliminating GNU bloatware, heavy libc wrappers, and runtime overhead.
+Depth Hinux is an open-source bedrock operating system engineered from raw silicon. It replaces traditional monolithic kernel components with a custom, high-performance x86-64 assembly system architecture (**88.1% Pure ASM Core**), completely eliminating GNU bloatware, heavy libc wrappers, and runtime overhead.
 
 ---
 
 ## Key Highlights
 
-- **Pure x86-64 Assembly Layer**: 27 standalone static assembly utilities and 16 core runtime subsystems with direct `syscall` kernel transitions.
+- **88.1% Pure x86-64 Assembly Layer**: 4,999 lines of pure assembly across standalone coreutils, runtime subsystems, and the bare-metal kernel core.
+- **Bare-Metal Hinux Kernel (`sys/kernel/`)**: Handcrafted 64-bit microkernel written entirely in assembly:
+  - 32-to-64-bit Long Mode Multiboot trampoline and initial PML4 paging.
+  - 64-bit Interrupt Descriptor Table (IDT) with 256 gates and PIC remapping.
+  - Physical memory frame bitmap allocator (4 KB pages).
+  - Preemptive Round-Robin Task Scheduler and 64-bit context switcher.
+  - MSR `LSTAR` (0xC0000082) hardware syscall trap dispatcher handling native system calls directly from Ring 3.
+  - Direct memory-mapped VGA text buffer driver (`0xB8000`) and serial COM1 driver (`0x3F8`).
 - **Zero GNU Bloat**: Free of GPL/GNU toolchains in userspace; native MIT-licensed Hinux command set.
 - **Solid "D" Geometry**: Custom standing-triangle identity rendered in solid ANSI truecolor blocks with zero wireframe gaps.
 - **Dive Package Engine (`dive`)**: Fast package manager with fuzzy name matching (`-install-similiar`), repository indexing, and standalone `.dpk` archives.
 - **Dedicated Community Repository (`pkg/repo/`)**: Open distribution format allowing anyone to build and submit software packages.
 - **Pure ASM Network Manager (`network` / `net`)**: Ultra-compact terminal interface to configure networking, DHCP, nameservers, and gateway routing on bare metal.
-- **Full Hybrid Bootable ISO**: Generates self-contained `boot/depth-hinux.iso` ready to burn or boot under QEMU.
-- **Bedrock Performance**: Runs under 25 MB RAM with instant sub-350ms boot.
+- **Dual Boot Execution**: Boot either directly onto the pure assembly microkernel or boot the hybrid distribution ISO under QEMU.
 
 ---
 
@@ -45,7 +51,8 @@ Depth Hinux is an open-source bedrock operating system engineered from raw silic
 ```
 Depth/
 ├── Makefile             # Unified build, ISO creation, and QEMU virtual machine runners
-├── sys/                 # Pure x86-64 assembly system layer
+├── sys/                 # 88.1% Pure x86-64 assembly system layer
+│   ├── kernel/          # 100% Pure assembly microkernel (boot, IDT, MM, sched, syscall)
 │   ├── asm/             # Native syscall dispatches, memory allocators, string SIMD
 │   ├── coreutils/       # Standalone ASM binaries (echo, cat, ls, network, etc.)
 │   └── init/            # Static Bedrock PID 1 init system (node setup, VT console)
@@ -66,28 +73,28 @@ Depth/
 
 ## Building and Running
 
-### 1. Build Bedrock Binaries & Initramfs
+### 1. Boot Pure ASM Hinux Kernel on Bare Metal (QEMU)
 ```bash
-make build
+make run-kernel
 ```
+Boots the 100% pure assembly Hinux microkernel (`sys/kernel/hinux-kernel.bin`) directly on bare metal without any Linux C code, initializing long mode, paging, IDT, syscall MSRs, and the solid red "D" console.
 
-### 2. Generate Full Bootable ISO
+### 2. Generate Full Hybrid Bootable ISO
 ```bash
 make iso
 ```
-Outputs `boot/depth-hinux.iso` (26 MB bootable hybrid ISO image).
+Outputs `boot/depth-hinux.iso` (25 MB bootable hybrid ISO image).
 
-### 3. Launch Graphical Virtual Machine (Direct Kernel Boot)
-```bash
-make run
-```
-Launches a real graphical QEMU window with verbose kernel text scrolling, the solid red "D" logo, Fastfetch telemetry, and the interactive bedrock shell.
-
-### 4. Boot Directly from the ISO
+### 3. Boot Directly from the Hybrid ISO
 ```bash
 make run-iso
 ```
-Boots the generated `boot/depth-hinux.iso` as a live CD/DVD with full network connectivity.
+Boots `boot/depth-hinux.iso` as a live CD/DVD with virtual user networking and the bedrock userland.
+
+### 4. Direct Kernel Boot with Verbose Scrolling
+```bash
+make run
+```
 
 ### 5. Headless Terminal Mode
 ```bash

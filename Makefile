@@ -1,9 +1,13 @@
 KVM_OPTS := $(shell [ -w /dev/kvm ] && echo "-enable-kvm -cpu host")
 
-all: build iso
+all: build iso kernel
+
+kernel:
+	$(MAKE) -C sys/kernel
 
 build:
 	$(MAKE) -C sys
+	$(MAKE) -C sys/kernel
 	gcc -static -O2 -s -o pkg/dive pkg/dive.c
 	gcc -static -O2 -s -o sys/init/init sys/init/init.c
 	gcc -O2 -s -o installer/depth-install installer/depth-install.c
@@ -11,6 +15,15 @@ build:
 
 iso: build
 	sh boot/build-iso.sh
+
+run-kernel: kernel
+	qemu-system-x86_64 \
+		$(KVM_OPTS) \
+		-kernel sys/kernel/hinux-kernel.bin \
+		-vga std \
+		-serial stdio \
+		-m 512M \
+		-no-reboot
 
 run:
 	qemu-system-x86_64 \
@@ -49,6 +62,7 @@ run-cli:
 
 clean:
 	$(MAKE) -C sys clean
+	$(MAKE) -C sys/kernel clean
 	rm -f pkg/dive sys/init/init installer/depth-install boot/depth-bare-initrd.img boot/depth-hinux.iso
 
-.PHONY: all build iso run run-iso run-cli clean
+.PHONY: all build iso kernel run-kernel run run-iso run-cli clean

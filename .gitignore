@@ -1,5 +1,8 @@
 sys/build/
 sys/bin/
+sys/kernel/*.o
+sys/kernel/*.elf
+sys/kernel/*.bin
 pkg/dive
 sys/init/init
 installer/depth-install
