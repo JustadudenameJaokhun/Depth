@@ -8,6 +8,8 @@
 #include <time.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <poll.h>
+#include <errno.h>
 
 #define MAX_COLS 160
 #define MAX_ROWS 60
@@ -447,51 +449,73 @@ int main(int argc, char **argv) {
     init_windows();
     draw_all();
 
+    struct pollfd pfd;
+    pfd.fd = STDIN_FILENO;
+    pfd.events = POLLIN;
+
+    time_t last_tick = 0;
     char buf[128];
     while (running) {
-        int n = read(STDIN_FILENO, buf, sizeof(buf) - 1);
-        if (n <= 0) break;
-        buf[n] = '\0';
+        int pr = poll(&pfd, 1, 300);
+        if (pr > 0 && (pfd.revents & POLLIN)) {
+            int n = read(STDIN_FILENO, buf, sizeof(buf) - 1);
+            if (n <= 0) {
+                if (!isatty(STDIN_FILENO)) {
+                    break;
+                }
+                continue;
+            }
+            buf[n] = '\0';
 
-        int idx = 0;
-        while (idx < n) {
-            if (buf[idx] == '\033' && idx + 2 < n && buf[idx + 1] == '[' && buf[idx + 2] == '<') {
-                int end = idx + 3;
-                while (end < n && buf[end] != 'm' && buf[end] != 'M') end++;
-                if (end < n) {
-                    char term_type = buf[end];
-                    buf[end] = '\0';
-                    int mb, mx, my;
-                    if (sscanf(buf + idx + 3, "%d;%d;%d", &mb, &mx, &my) == 3) {
-                        handle_mouse_event(mb, mx - 1, my - 1, term_type);
-                        draw_all();
+            int idx = 0;
+            while (idx < n) {
+                if (buf[idx] == '\033' && idx + 2 < n && buf[idx + 1] == '[' && buf[idx + 2] == '<') {
+                    int end = idx + 3;
+                    while (end < n && buf[end] != 'm' && buf[end] != 'M') end++;
+                    if (end < n) {
+                        char term_type = buf[end];
+                        buf[end] = '\0';
+                        int mb, mx, my;
+                        if (sscanf(buf + idx + 3, "%d;%d;%d", &mb, &mx, &my) == 3) {
+                            handle_mouse_event(mb, mx - 1, my - 1, term_type);
+                            draw_all();
+                        }
+                        idx = end + 1;
+                        continue;
                     }
-                    idx = end + 1;
-                    continue;
                 }
-            }
 
-            char c = buf[idx];
-            if (c == 'q' || c == 'Q') {
-                running = 0;
-            } else if (c == 't' || c == 'T' || c == 9) {
-                active_win_id = (active_win_id + 1) % MAX_WINDOWS;
-                bring_to_front(active_win_id);
-                draw_all();
-            } else if (c == 'm' || c == 'M') {
-                menu_open = !menu_open;
-                draw_all();
-            } else if (c >= '1' && c <= '3') {
-                bring_to_front(c - '1');
-                draw_all();
-            } else if (c == 'x' || c == 'X') {
-                if (access("/usr/bin/cinnamon-session", X_OK) == 0) {
-                    disable_raw_mode();
-                    char *c_args[] = {"/usr/bin/cinnamon-session", NULL};
-                    execv("/usr/bin/cinnamon-session", c_args);
+                char c = buf[idx];
+                if (c == 'q' || c == 'Q') {
+                    running = 0;
+                } else if (c == 't' || c == 'T' || c == 9) {
+                    active_win_id = (active_win_id + 1) % MAX_WINDOWS;
+                    bring_to_front(active_win_id);
+                    draw_all();
+                } else if (c == 'm' || c == 'M') {
+                    menu_open = !menu_open;
+                    draw_all();
+                } else if (c >= '1' && c <= '3') {
+                    bring_to_front(c - '1');
+                    draw_all();
+                } else if (c == 'x' || c == 'X') {
+                    if (access("/usr/bin/cinnamon-session", X_OK) == 0) {
+                        disable_raw_mode();
+                        char *c_args[] = {"/usr/bin/cinnamon-session", NULL};
+                        execv("/usr/bin/cinnamon-session", c_args);
+                    }
                 }
+                idx++;
             }
-            idx++;
+        } else if (pr == 0) {
+            time_t now = time(NULL);
+            if (now != last_tick) {
+                last_tick = now;
+                draw_all();
+            }
+        } else if (pr < 0) {
+            if (errno == EINTR) continue;
+            if (!isatty(STDIN_FILENO)) break;
         }
     }
 

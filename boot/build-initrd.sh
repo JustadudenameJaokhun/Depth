@@ -17,6 +17,10 @@ chmod +x "$STAGING"/bin/depthinstall "$STAGING"/usr/bin/depthinstall
 
 ln -sf /bin/shutdown "$STAGING"/sbin/shutdown
 ln -sf /bin/shutdown "$STAGING"/bin/poweroff
+ln -sf /bin/glare "$STAGING"/bin/cinnamon
+ln -sf /bin/glare "$STAGING"/bin/cinnamon-session
+ln -sf /bin/glare "$STAGING"/bin/desktop
+ln -sf /bin/glare "$STAGING"/bin/startx
 
 cp -f /home/jaokhun/Projects/Depth/pkg/dive "$STAGING"/bin/dive
 cp -f /home/jaokhun/Projects/Depth/pkg/dive "$STAGING"/usr/bin/dive
