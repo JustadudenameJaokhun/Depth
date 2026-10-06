@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <termios.h>
 #include <sys/ioctl.h>
@@ -8,29 +9,39 @@
 #include <signal.h>
 #include <fcntl.h>
 
-#define MAX_WINDOWS 4
+#define MAX_COLS 160
+#define MAX_ROWS 60
+#define MAX_WINDOWS 3
+
+typedef struct {
+    char ch[8];
+    uint8_t fg_r, fg_g, fg_b;
+    uint8_t bg_r, bg_g, bg_b;
+    uint8_t bold;
+} Cell;
 
 typedef struct {
     int id;
     char title[64];
     int x, y, w, h;
     int visible;
-    int focused;
     int is_dragging;
     int drag_ox, drag_oy;
     int app_type;
 } Window;
 
 static struct termios orig_termios;
+static Cell grid[MAX_ROWS][MAX_COLS];
 static int term_cols = 80;
 static int term_rows = 25;
 static Window windows[MAX_WINDOWS];
-static int active_win_idx = 0;
+static int win_zorder[MAX_WINDOWS];
+static int active_win_id = 0;
 static int running = 1;
 
 static void disable_raw_mode(void) {
     printf("\033[?1000l\033[?1002l\033[?1006l");
-    printf("\033[?25h\033[0m\033[2J\033[H");
+    printf("\033[?25h\033[0m\033[2J\033[H\033[3J");
     fflush(stdout);
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 }
@@ -56,246 +67,321 @@ static void update_termsize(void) {
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0) {
         term_cols = ws.ws_col;
         term_rows = ws.ws_row;
+        if (term_cols > MAX_COLS) term_cols = MAX_COLS;
+        if (term_rows > MAX_ROWS) term_rows = MAX_ROWS;
     } else {
         term_cols = 80;
         term_rows = 25;
     }
 }
 
-static void init_windows(void) {
-    windows[0].id = 1;
-    strncpy(windows[0].title, "Mozilla Firefox 156.0 - Glare Engine", sizeof(windows[0].title));
-    windows[0].x = 4;
-    windows[0].y = 3;
-    windows[0].w = 72;
-    windows[0].h = 17;
-    windows[0].visible = 1;
-    windows[0].focused = 1;
-    windows[0].is_dragging = 0;
-    windows[0].app_type = 1;
-
-    windows[1].id = 2;
-    strncpy(windows[1].title, "depth-hinux ~/ [Terminal]", sizeof(windows[1].title));
-    windows[1].x = 38;
-    windows[1].y = 8;
-    windows[1].w = 38;
-    windows[1].h = 12;
-    windows[1].visible = 1;
-    windows[1].focused = 0;
-    windows[1].is_dragging = 0;
-    windows[1].app_type = 2;
-
-    windows[2].id = 3;
-    strncpy(windows[2].title, "Depth Telemetry", sizeof(windows[2].title));
-    windows[2].x = 6;
-    windows[2].y = 12;
-    windows[2].w = 30;
-    windows[2].h = 9;
-    windows[2].visible = 1;
-    windows[2].focused = 0;
-    windows[2].is_dragging = 0;
-    windows[2].app_type = 3;
-
-    active_win_idx = 0;
+static void set_cell(int r, int c, const char *glyph, uint8_t fr, uint8_t fg, uint8_t fb, uint8_t br, uint8_t bg, uint8_t bb, uint8_t bold) {
+    if (r < 0 || r >= term_rows || c < 0 || c >= term_cols) return;
+    strncpy(grid[r][c].ch, glyph, sizeof(grid[r][c].ch) - 1);
+    grid[r][c].ch[sizeof(grid[r][c].ch) - 1] = '\0';
+    grid[r][c].fg_r = fr;
+    grid[r][c].fg_g = fg;
+    grid[r][c].fg_b = fb;
+    grid[r][c].bg_r = br;
+    grid[r][c].bg_g = bg;
+    grid[r][c].bg_b = bb;
+    grid[r][c].bold = bold;
 }
 
-static void set_cursor(int x, int y) {
-    printf("\033[%d;%dH", y, x);
+static void draw_text(int r, int c, const char *str, uint8_t fr, uint8_t fg, uint8_t fb, uint8_t br, uint8_t bg, uint8_t bb, uint8_t bold, int max_len) {
+    int len = 0;
+    while (*str && (max_len < 0 || len < max_len)) {
+        if (c + len >= term_cols) break;
+        char buf[2] = {*str, '\0'};
+        set_cell(r, c + len, buf, fr, fg, fb, br, bg, bb, bold);
+        str++;
+        len++;
+    }
 }
 
-static void render_firefox_content(int x, int y, int w, int h) {
-    set_cursor(x + 2, y + 2);
-    printf("\033[38;2;200;200;200m\033[48;2;40;40;45m[<] [>] [R]  URL: \033[38;2;255;255;255m\033[48;2;30;30;35m https://depth-hinux.org/welcome         \033[0m");
-
-    set_cursor(x + 2, y + 4);
-    printf("\033[1m\033[38;2;230;40;40m\033[48;2;25;25;30m MOZILLA FIREFOX \033[38;2;180;180;180m:: Glare Pixel-to-Font Engine \033[0m");
-
-    set_cursor(x + 2, y + 6);
-    printf("\033[38;2;220;220;220m\033[48;2;25;25;30m Rendered via 24-bit Unicode half-blocks (2 pixels/font cell):\033[0m");
-
-    for (int row = 0; row < 4 && (y + 7 + row < y + h - 2); row++) {
-        set_cursor(x + 4, y + 7 + row);
-        printf("\033[48;2;25;25;30m");
-        for (int col = 0; col < 32 && (col < w - 8); col++) {
-            int r1 = (col * 7 + row * 20) % 255;
-            int g1 = (255 - col * 6) % 255;
-            int b1 = 180;
-            int r2 = (col * 8 + (row + 1) * 20) % 255;
-            int g2 = (255 - col * 7) % 255;
-            int b2 = 120;
-            printf("\033[38;2;%d;%d;%dm\033[48;2;%d;%d;%dm▀", r1, g1, b1, r2, g2, b2);
+static void bring_to_front(int win_idx) {
+    int found = -1;
+    for (int i = 0; i < MAX_WINDOWS; i++) {
+        if (win_zorder[i] == win_idx) {
+            found = i;
+            break;
         }
-        printf("\033[0m");
+    }
+    if (found >= 0) {
+        for (int i = found; i < MAX_WINDOWS - 1; i++) {
+            win_zorder[i] = win_zorder[i + 1];
+        }
+        win_zorder[MAX_WINDOWS - 1] = win_idx;
+    }
+    active_win_id = win_idx;
+    windows[win_idx].visible = 1;
+}
+
+static void init_windows(void) {
+    windows[0].id = 0;
+    strncpy(windows[0].title, "Mozilla Firefox 156.0 - Glare Browser", sizeof(windows[0].title));
+    windows[0].x = 3;
+    windows[0].y = 2;
+    windows[0].w = 74;
+    windows[0].h = 15;
+    windows[0].visible = 1;
+    windows[0].is_dragging = 0;
+    windows[0].app_type = 0;
+
+    windows[1].id = 1;
+    strncpy(windows[1].title, "depth-hinux [Terminal]", sizeof(windows[1].title));
+    windows[1].x = 38;
+    windows[1].y = 7;
+    windows[1].w = 39;
+    windows[1].h = 13;
+    windows[1].visible = 1;
+    windows[1].is_dragging = 0;
+    windows[1].app_type = 1;
+
+    windows[2].id = 2;
+    strncpy(windows[2].title, "Depth Telemetry", sizeof(windows[2].title));
+    windows[2].x = 4;
+    windows[2].y = 9;
+    windows[2].w = 32;
+    windows[2].h = 10;
+    windows[2].visible = 1;
+    windows[2].is_dragging = 0;
+    windows[2].app_type = 2;
+
+    win_zorder[0] = 1;
+    win_zorder[1] = 2;
+    win_zorder[2] = 0;
+    active_win_id = 0;
+}
+
+static void render_desktop_background(void) {
+    for (int r = 0; r < term_rows; r++) {
+        for (int c = 0; c < term_cols; c++) {
+            if ((r + c) % 12 == 0) {
+                set_cell(r, c, ".", 40, 40, 48, 14, 14, 18, 0);
+            } else {
+                set_cell(r, c, " ", 0, 0, 0, 14, 14, 18, 0);
+            }
+        }
     }
 
-    set_cursor(x + 2, y + 12);
-    printf("\033[38;2;160;160;160m\033[48;2;25;25;30m Navigation:  \033[38;2;230;80;80m[Home]\033[38;2;160;160;160m  \033[38;2;80;180;230m[Packages]\033[38;2;160;160;160m  \033[38;2;80;230;120m[Kernel]\033[38;2;160;160;160m  \033[38;2;230;200;80m[Network]\033[0m");
-    set_cursor(x + 2, y + 13);
-    printf("\033[38;2;100;100;100m\033[48;2;25;25;30m Web Engine: Gecko 156.0 ELF Native | Memory: 32MB Text Surface\033[0m");
-}
-
-static void render_terminal_content(int x, int y, int w, int h) {
-    set_cursor(x + 2, y + 2);
-    printf("\033[38;2;180;180;180m\033[48;2;18;18;20mDepth Hinux Bedrock Terminal (Pure ASM Core)\033[0m");
-    set_cursor(x + 2, y + 4);
-    printf("\033[38;2;230;40;40m\033[48;2;18;18;20mdepth-hinux ~/\033[0m \033[38;2;220;220;220m\033[48;2;18;18;20muname -srm\033[0m");
-    set_cursor(x + 2, y + 5);
-    printf("\033[38;2;150;150;150m\033[48;2;18;18;20mHinux 1.0.0 x86_64\033[0m");
-    set_cursor(x + 2, y + 7);
-    printf("\033[38;2;230;40;40m\033[48;2;18;18;20mdepth-hinux ~/\033[0m \033[38;2;220;220;220m\033[48;2;18;18;20mdive -search\033[0m");
-    set_cursor(x + 2, y + 8);
-    printf("\033[38;2;150;150;150m\033[48;2;18;18;20mfirefox.dpk  available (real ELF)\033[0m");
-    set_cursor(x + 2, y + 9);
-    printf("\033[38;2;230;40;40m\033[48;2;18;18;20mdepth-hinux ~/\033[0m \033[38;2;255;255;255m\033[48;2;18;18;20m█\033[0m");
-}
-
-static void render_telemetry_content(int x, int y, int w, int h) {
-    set_cursor(x + 2, y + 2);
-    printf("\033[38;2;230;40;40m\033[48;2;22;22;25mDEPTH NODE TELEMETRY\033[0m");
-    set_cursor(x + 2, y + 4);
-    printf("\033[38;2;180;180;180m\033[48;2;22;22;25mArchitecture: Hinux x86_64\033[0m");
-    set_cursor(x + 2, y + 5);
-    printf("\033[38;2;180;180;180m\033[48;2;22;22;25mASM Ratio:    88.38%% Pure\033[0m");
-    set_cursor(x + 2, y + 6);
-    printf("\033[38;2;180;180;180m\033[48;2;22;22;25mWindow Eng:   Glare Font-UI\033[0m");
-    set_cursor(x + 2, y + 7);
-    printf("\033[38;2;180;180;180m\033[48;2;22;22;25mMouse Track:  SGR Active\033[0m");
-}
-
-static void draw_window(Window *win) {
-    if (!win->visible) return;
-
-    int is_act = win->focused;
-    const char *border_color = is_act ? "\033[38;2;230;30;30m" : "\033[38;2;80;80;85m";
-    const char *title_bg = is_act ? "\033[48;2;180;20;20m\033[38;2;255;255;255m\033[1m" : "\033[48;2;50;50;55m\033[38;2;180;180;180m";
-    const char *body_bg = "\033[48;2;25;25;30m";
-
-    set_cursor(win->x, win->y);
-    printf("%s%s[X]%s %s", border_color, "\033[38;2;255;80;80m", border_color, title_bg);
-    printf(" %-.*s ", win->w - 9, win->title);
-    for (int i = strlen(win->title) + 7; i < win->w - 1; i++) putchar(' ');
-    printf("\033[0m%s│\033[0m", border_color);
-
-    for (int r = 1; r < win->h - 1; r++) {
-        set_cursor(win->x, win->y + r);
-        printf("%s│%s", border_color, body_bg);
-        for (int c = 1; c < win->w - 1; c++) putchar(' ');
-        printf("\033[0m%s│\033[0m", border_color);
+    for (int c = 0; c < term_cols; c++) {
+        set_cell(0, c, " ", 0, 0, 0, 18, 18, 23, 0);
     }
-
-    set_cursor(win->x, win->y + win->h - 1);
-    printf("%s└", border_color);
-    for (int c = 1; c < win->w - 1; c++) printf("─");
-    printf("┘\033[0m");
-
-    if (win->app_type == 1) {
-        render_firefox_content(win->x, win->y, win->w, win->h);
-    } else if (win->app_type == 2) {
-        render_terminal_content(win->x, win->y, win->w, win->h);
-    } else if (win->app_type == 3) {
-        render_telemetry_content(win->x, win->y, win->w, win->h);
-    }
-}
-
-static void draw_desktop(void) {
-    printf("\033[H\033[48;2;15;15;18m\033[38;2;255;255;255m");
-    printf(" \033[1m\033[38;2;230;30;30m◬ DEPTH GLARE\033[0m\033[48;2;15;15;18m   ");
-    printf("[1] Firefox  [2] Terminal  [3] Telemetry   ");
-    for (int i = 50; i < term_cols - 12; i++) putchar(' ');
+    draw_text(0, 1, "\xe2\x97\xac DEPTH GLARE", 230, 30, 30, 18, 18, 23, 1, -1);
+    draw_text(0, 17, "[1: Firefox]", active_win_id == 0 ? 255 : 160, active_win_id == 0 ? 255 : 160, active_win_id == 0 ? 255 : 170, 18, 18, 23, active_win_id == 0 ? 1 : 0, -1);
+    draw_text(0, 31, "[2: Terminal]", active_win_id == 1 ? 255 : 160, active_win_id == 1 ? 255 : 160, active_win_id == 1 ? 255 : 170, 18, 18, 23, active_win_id == 1 ? 1 : 0, -1);
+    draw_text(0, 46, "[3: Telemetry]", active_win_id == 2 ? 255 : 160, active_win_id == 2 ? 255 : 160, active_win_id == 2 ? 255 : 170, 18, 18, 23, active_win_id == 2 ? 1 : 0, -1);
 
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
+    char time_str[16];
     if (tm) {
-        printf(" %02d:%02d:%02d ", tm->tm_hour, tm->tm_min, tm->tm_sec);
+        snprintf(time_str, sizeof(time_str), "%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec);
+    } else {
+        strncpy(time_str, "12:00:00", sizeof(time_str));
     }
-    printf("\033[0m\n");
+    draw_text(0, term_cols - 10, time_str, 200, 200, 210, 18, 18, 23, 0, -1);
 
-    for (int r = 2; r < term_rows; r++) {
-        set_cursor(1, r);
-        printf("\033[48;2;10;10;12m");
-        for (int c = 0; c < term_cols; c++) {
-            if ((r + c) % 18 == 0) {
-                printf("\033[38;2;25;25;30m·\033[48;2;10;10;12m");
-            } else {
-                putchar(' ');
-            }
-        }
-        printf("\033[0m");
+    int bot_r = term_rows - 1;
+    for (int c = 0; c < term_cols; c++) {
+        set_cell(bot_r, c, " ", 0, 0, 0, 22, 22, 28, 0);
     }
-
-    set_cursor(1, term_rows);
-    printf("\033[48;2;20;20;25m\033[38;2;200;200;200m");
-    printf(" [Mouse: Drag Titlebar]  [Tab] Switch Window  [F] Firefox  [T] Terminal  [Q] Exit Glare");
-    for (int i = 85; i < term_cols; i++) putchar(' ');
-    printf("\033[0m");
-
-    for (int i = 0; i < MAX_WINDOWS; i++) {
-        if (i != active_win_idx) {
-            draw_window(&windows[i]);
-        }
-    }
-    if (active_win_idx >= 0 && active_win_idx < MAX_WINDOWS) {
-        draw_window(&windows[active_win_idx]);
-    }
-    fflush(stdout);
+    draw_text(bot_r, 1, " [Drag Titlebar: Move]  [Tab: Switch]  [1-3: Focus]  [F: Web]  [T: Term]  [Q: Exit] ", 180, 180, 190, 22, 22, 28, 0, -1);
 }
 
-static void activate_window(int idx) {
-    if (idx < 0 || idx >= MAX_WINDOWS) return;
-    for (int i = 0; i < MAX_WINDOWS; i++) {
-        windows[i].focused = (i == idx);
+static void render_window(Window *w, int is_active) {
+    if (!w->visible) return;
+
+    uint8_t t_bg_r = is_active ? 185 : 42;
+    uint8_t t_bg_g = is_active ? 25 : 42;
+    uint8_t t_bg_b = is_active ? 25 : 48;
+    uint8_t t_fg_r = is_active ? 255 : 180;
+    uint8_t t_fg_g = is_active ? 255 : 180;
+    uint8_t t_fg_b = is_active ? 255 : 190;
+
+    uint8_t b_fg_r = is_active ? 220 : 65;
+    uint8_t b_fg_g = is_active ? 30 : 65;
+    uint8_t b_fg_b = is_active ? 30 : 75;
+
+    uint8_t in_bg_r = 22;
+    uint8_t in_bg_g = 22;
+    uint8_t in_bg_b = 27;
+
+    for (int r = w->y; r < w->y + w->h; r++) {
+        for (int c = w->x; c < w->x + w->w; c++) {
+            if (r == w->y) {
+                set_cell(r, c, " ", t_fg_r, t_fg_g, t_fg_b, t_bg_r, t_bg_g, t_bg_b, 0);
+            } else if (r == w->y + w->h - 1) {
+                if (c == w->x) set_cell(r, c, "+", b_fg_r, b_fg_g, b_fg_b, in_bg_r, in_bg_g, in_bg_b, 1);
+                else if (c == w->x + w->w - 1) set_cell(r, c, "+", b_fg_r, b_fg_g, b_fg_b, in_bg_r, in_bg_g, in_bg_b, 1);
+                else set_cell(r, c, "-", b_fg_r, b_fg_g, b_fg_b, in_bg_r, in_bg_g, in_bg_b, 0);
+            } else {
+                if (c == w->x || c == w->x + w->w - 1) {
+                    set_cell(r, c, "|", b_fg_r, b_fg_g, b_fg_b, in_bg_r, in_bg_g, in_bg_b, 1);
+                } else {
+                    set_cell(r, c, " ", 0, 0, 0, in_bg_r, in_bg_g, in_bg_b, 0);
+                }
+            }
+        }
     }
-    active_win_idx = idx;
-    windows[idx].visible = 1;
+
+    set_cell(w->y, w->x + 1, "[", 255, 80, 80, t_bg_r, t_bg_g, t_bg_b, 1);
+    set_cell(w->y, w->x + 2, "X", 255, 255, 255, t_bg_r, t_bg_g, t_bg_b, 1);
+    set_cell(w->y, w->x + 3, "]", 255, 80, 80, t_bg_r, t_bg_g, t_bg_b, 1);
+    draw_text(w->y, w->x + 5, w->title, t_fg_r, t_fg_g, t_fg_b, t_bg_r, t_bg_g, t_bg_b, is_active ? 1 : 0, w->w - 7);
+
+    if (w->app_type == 0) {
+        for (int c = w->x + 2; c < w->x + w->w - 2; c++) {
+            set_cell(w->y + 2, c, " ", 0, 0, 0, 32, 32, 38, 0);
+        }
+        draw_text(w->y + 2, w->x + 3, "[<] [>] [R]  URL: https://depth-hinux.org/welcome", 220, 220, 230, 32, 32, 38, 0, w->w - 6);
+
+        draw_text(w->y + 4, w->x + 3, "MOZILLA FIREFOX 156.0", 240, 50, 50, in_bg_r, in_bg_g, in_bg_b, 1, -1);
+        draw_text(w->y + 4, w->x + 26, ":: Glare Pixel-to-Font Engine", 170, 170, 180, in_bg_r, in_bg_g, in_bg_b, 0, -1);
+
+        draw_text(w->y + 5, w->x + 3, "24-bit half-block surface (2 vertical subpixels/cell):", 160, 160, 170, in_bg_r, in_bg_g, in_bg_b, 0, -1);
+
+        for (int pr = 0; pr < 4 && (w->y + 6 + pr < w->y + w->h - 3); pr++) {
+            for (int pc = 0; pc < 44 && (w->x + 3 + pc < w->x + w->w - 3); pc++) {
+                uint8_t r1 = (pc * 6 + pr * 25) % 255;
+                uint8_t g1 = (255 - pc * 5) % 255;
+                uint8_t b1 = 180;
+                uint8_t r2 = (pc * 7 + (pr + 1) * 25) % 255;
+                uint8_t g2 = (255 - pc * 6) % 255;
+                uint8_t b2 = 120;
+                set_cell(w->y + 6 + pr, w->x + 3 + pc, "\xe2\x96\x80", r1, g1, b1, r2, g2, b2, 0);
+            }
+        }
+
+        draw_text(w->y + 11, w->x + 3, "[ Home ]   [ Packages ]   [ Kernel ]   [ Network ]", 90, 180, 240, in_bg_r, in_bg_g, in_bg_b, 1, -1);
+        draw_text(w->y + 12, w->x + 3, "Gecko 156.0 Native ELF | SGR Mouse Active | Status: Online", 120, 120, 130, in_bg_r, in_bg_g, in_bg_b, 0, -1);
+    } else if (w->app_type == 1) {
+        draw_text(w->y + 2, w->x + 2, "depth-hinux ~/", 230, 30, 30, in_bg_r, in_bg_g, in_bg_b, 1, -1);
+        draw_text(w->y + 2, w->x + 17, "uname -srm", 220, 220, 220, in_bg_r, in_bg_g, in_bg_b, 0, -1);
+        draw_text(w->y + 3, w->x + 2, "Hinux 1.0.0 x86_64", 160, 160, 170, in_bg_r, in_bg_g, in_bg_b, 0, -1);
+
+        draw_text(w->y + 5, w->x + 2, "depth-hinux ~/", 230, 30, 30, in_bg_r, in_bg_g, in_bg_b, 1, -1);
+        draw_text(w->y + 5, w->x + 17, "dive -search", 220, 220, 220, in_bg_r, in_bg_g, in_bg_b, 0, -1);
+        draw_text(w->y + 6, w->x + 2, "firefox.dpk  available (real ELF)", 160, 160, 170, in_bg_r, in_bg_g, in_bg_b, 0, -1);
+
+        draw_text(w->y + 8, w->x + 2, "depth-hinux ~/", 230, 30, 30, in_bg_r, in_bg_g, in_bg_b, 1, -1);
+        set_cell(w->y + 8, w->x + 17, " ", 0, 0, 0, 255, 255, 255, 0);
+    } else if (w->app_type == 2) {
+        draw_text(w->y + 2, w->x + 2, "Architecture: Hinux x86_64", 180, 180, 190, in_bg_r, in_bg_g, in_bg_b, 0, -1);
+        draw_text(w->y + 3, w->x + 2, "ASM Core:     85.07% Pure", 240, 50, 50, in_bg_r, in_bg_g, in_bg_b, 1, -1);
+        draw_text(w->y + 4, w->x + 2, "Window Eng:   Glare Font-UI", 180, 180, 190, in_bg_r, in_bg_g, in_bg_b, 0, -1);
+        draw_text(w->y + 5, w->x + 2, "Network IP:   eth0 10.0.2.15", 80, 220, 120, in_bg_r, in_bg_g, in_bg_b, 1, -1);
+        draw_text(w->y + 6, w->x + 2, "Memory State: 512 MB Active", 180, 180, 190, in_bg_r, in_bg_g, in_bg_b, 0, -1);
+    }
+}
+
+static void flush_grid(void) {
+    char out_buf[65536];
+    int pos = 0;
+
+    pos += snprintf(out_buf + pos, sizeof(out_buf) - pos, "\033[H");
+
+    int last_fr = -1, last_fg = -1, last_fb = -1;
+    int last_br = -1, last_bg = -1, last_bb = -1;
+    int last_bold = -1;
+
+    for (int r = 0; r < term_rows; r++) {
+        for (int c = 0; c < term_cols; c++) {
+            Cell *cl = &grid[r][c];
+
+            int color_changed = (cl->fg_r != last_fr || cl->fg_g != last_fg || cl->fg_b != last_fb ||
+                                 cl->bg_r != last_br || cl->bg_g != last_bg || cl->bg_b != last_bb ||
+                                 cl->bold != last_bold);
+
+            if (color_changed) {
+                pos += snprintf(out_buf + pos, sizeof(out_buf) - pos,
+                                "\033[%d;38;2;%d;%d;%dm\033[48;2;%d;%d;%dm",
+                                cl->bold ? 1 : 22,
+                                cl->fg_r, cl->fg_g, cl->fg_b,
+                                cl->bg_r, cl->bg_g, cl->bg_b);
+                last_fr = cl->fg_r; last_fg = cl->fg_g; last_fb = cl->fg_b;
+                last_br = cl->bg_r; last_bg = cl->bg_g; last_bb = cl->bg_b;
+                last_bold = cl->bold;
+            }
+
+            const char *glyph = cl->ch[0] ? cl->ch : " ";
+            int glen = strlen(glyph);
+            if (pos + glen + 16 < (int)sizeof(out_buf)) {
+                memcpy(out_buf + pos, glyph, glen);
+                pos += glen;
+            }
+        }
+        if (r < term_rows - 1 && pos + 4 < (int)sizeof(out_buf)) {
+            out_buf[pos++] = '\n';
+        }
+    }
+
+    pos += snprintf(out_buf + pos, sizeof(out_buf) - pos, "\033[0m");
+    write(STDOUT_FILENO, out_buf, pos);
+}
+
+static void redraw_all(void) {
+    render_desktop_background();
+    for (int i = 0; i < MAX_WINDOWS; i++) {
+        int wid = win_zorder[i];
+        render_window(&windows[wid], wid == active_win_id);
+    }
+    flush_grid();
 }
 
 static void handle_mouse_event(int btn, int x, int y, char end_char) {
+    int row = y - 1;
+    int col = x - 1;
+
     if (end_char == 'M') {
         if (btn == 0) {
-            if (y == 1) {
-                if (x >= 15 && x <= 27) activate_window(0);
-                else if (x >= 28 && x <= 42) activate_window(1);
-                else if (x >= 43 && x <= 58) activate_window(2);
-                draw_desktop();
+            if (row == 0) {
+                if (col >= 17 && col <= 29) bring_to_front(0);
+                else if (col >= 31 && col <= 44) bring_to_front(1);
+                else if (col >= 46 && col <= 60) bring_to_front(2);
+                redraw_all();
                 return;
             }
 
-            for (int i = 0; i < MAX_WINDOWS; i++) {
-                Window *w = &windows[i];
+            for (int i = MAX_WINDOWS - 1; i >= 0; i--) {
+                int wid = win_zorder[i];
+                Window *w = &windows[wid];
                 if (!w->visible) continue;
-                if (y == w->y && x >= w->x && x < w->x + w->w) {
-                    activate_window(i);
-                    if (x >= w->x + 1 && x <= w->x + 3) {
+
+                if (row == w->y && col >= w->x && col < w->x + w->w) {
+                    bring_to_front(wid);
+                    if (col >= w->x + 1 && col <= w->x + 3) {
                         w->visible = 0;
-                        draw_desktop();
+                        redraw_all();
                         return;
                     }
                     w->is_dragging = 1;
-                    w->drag_ox = x - w->x;
-                    w->drag_oy = y - w->y;
-                    draw_desktop();
+                    w->drag_ox = col - w->x;
+                    w->drag_oy = row - w->y;
+                    redraw_all();
                     return;
-                } else if (x >= w->x && x < w->x + w->w && y >= w->y && y < w->y + w->h) {
-                    activate_window(i);
-                    draw_desktop();
+                } else if (col >= w->x && col < w->x + w->w && row >= w->y && row < w->y + w->h) {
+                    bring_to_front(wid);
+                    redraw_all();
                     return;
                 }
             }
         } else if (btn == 32) {
-            if (active_win_idx >= 0 && windows[active_win_idx].is_dragging) {
-                Window *w = &windows[active_win_idx];
-                w->x = x - w->drag_ox;
-                w->y = y - w->drag_oy;
-                if (w->x < 1) w->x = 1;
-                if (w->y < 2) w->y = 2;
+            if (active_win_id >= 0 && windows[active_win_id].is_dragging) {
+                Window *w = &windows[active_win_id];
+                w->x = col - w->drag_ox;
+                w->y = row - w->drag_oy;
+                if (w->x < 0) w->x = 0;
+                if (w->y < 1) w->y = 1;
                 if (w->x + w->w > term_cols) w->x = term_cols - w->w;
-                if (w->y + w->h > term_rows) w->y = term_rows - w->h;
-                draw_desktop();
+                if (w->y + w->h > term_rows - 1) w->y = term_rows - 1 - w->h;
+                redraw_all();
             }
         }
     } else if (end_char == 'm') {
-        if (active_win_idx >= 0) {
-            windows[active_win_idx].is_dragging = 0;
+        if (active_win_id >= 0) {
+            windows[active_win_id].is_dragging = 0;
         }
     }
 }
@@ -304,28 +390,32 @@ int main(void) {
     update_termsize();
     enable_raw_mode();
     init_windows();
-    draw_desktop();
+    redraw_all();
 
     char buf[128];
     while (running) {
         int n = read(STDIN_FILENO, buf, sizeof(buf) - 1);
+        if (n == 0) {
+            running = 0;
+            break;
+        }
         if (n > 0) {
             buf[n] = '\0';
             if (buf[0] == 'q' || buf[0] == 'Q') {
                 running = 0;
                 break;
             } else if (buf[0] == '\t') {
-                activate_window((active_win_idx + 1) % 3);
-                draw_desktop();
+                bring_to_front((active_win_id + 1) % MAX_WINDOWS);
+                redraw_all();
             } else if (buf[0] == '1' || buf[0] == 'f' || buf[0] == 'F') {
-                activate_window(0);
-                draw_desktop();
+                bring_to_front(0);
+                redraw_all();
             } else if (buf[0] == '2' || buf[0] == 't' || buf[0] == 'T') {
-                activate_window(1);
-                draw_desktop();
+                bring_to_front(1);
+                redraw_all();
             } else if (buf[0] == '3') {
-                activate_window(2);
-                draw_desktop();
+                bring_to_front(2);
+                redraw_all();
             } else if (buf[0] == '\033' && n >= 6 && buf[1] == '[' && buf[2] == '<') {
                 int btn, mx, my;
                 char end_c;
@@ -334,7 +424,7 @@ int main(void) {
                 }
             }
         }
-        usleep(20000);
+        usleep(15000);
     }
 
     disable_raw_mode();

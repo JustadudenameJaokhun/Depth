@@ -55,6 +55,8 @@ static void setup_console(void) {
 }
 
 static void print_welcome(void) {
+    printf("\033[2J\033[H\033[3J");
+    fflush(stdout);
     time_t t = time(NULL);
     struct tm *tm_info = localtime(&t);
     char time_str[64];
@@ -122,13 +124,13 @@ int main(void) {
     setenv("LOGNAME", "root", 1);
     setenv("HOSTNAME", "dimensions", 1);
     setenv("TERM", "linux", 1);
-    setenv("PS1", "depth-hinux ~/ ", 1);
+    setenv("PS1", "\033[1;31mdepth-hinux \033[0;31m~/\033[0m ", 1);
 
     FILE *fprof = fopen("/etc/profile", "w");
     if (fprof) {
         fputs("export PATH=/bin:/sbin:/usr/bin:/usr/sbin\n", fprof);
         fputs("export HOME=/root\n", fprof);
-        fputs("export PS1=\"depth-hinux ~/ \"\n", fprof);
+        fputs("export PS1=\"\\033[1;31mdepth-hinux \\033[0;31m~/\\033[0m \"\n", fprof);
         fputs("export TERM=linux\n", fprof);
         fclose(fprof);
     }

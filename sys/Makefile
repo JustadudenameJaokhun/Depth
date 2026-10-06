@@ -14,7 +14,8 @@ COREUTILS = $(BIN_DIR)/echo $(BIN_DIR)/cat $(BIN_DIR)/ls $(BIN_DIR)/cp \
             $(BIN_DIR)/kill $(BIN_DIR)/sync $(BIN_DIR)/seq $(BIN_DIR)/chmod \
             $(BIN_DIR)/tr $(BIN_DIR)/uniq $(BIN_DIR)/sort $(BIN_DIR)/network $(BIN_DIR)/net \
             $(BIN_DIR)/shutdown $(BIN_DIR)/which $(BIN_DIR)/file $(BIN_DIR)/hostname \
-            $(BIN_DIR)/uptime $(BIN_DIR)/free $(BIN_DIR)/ps
+            $(BIN_DIR)/uptime $(BIN_DIR)/free $(BIN_DIR)/ps $(BIN_DIR)/cal \
+            $(BIN_DIR)/tail $(BIN_DIR)/df $(BIN_DIR)/cut $(BIN_DIR)/grep
 
 ASM_OBJS = $(BUILD_DIR)/string.o $(BUILD_DIR)/mem.o $(BUILD_DIR)/io.o \
            $(BUILD_DIR)/avx2_mem.o $(BUILD_DIR)/string_simd.o $(BUILD_DIR)/hinux.o \
@@ -26,7 +27,8 @@ ASM_OBJS = $(BUILD_DIR)/string.o $(BUILD_DIR)/mem.o $(BUILD_DIR)/io.o \
            $(BUILD_DIR)/glare_compositor.o $(BUILD_DIR)/glare_font_tables.o \
            $(BUILD_DIR)/glare_raster.o $(BUILD_DIR)/glare_events.o \
            $(BUILD_DIR)/glare_widgets.o $(BUILD_DIR)/vfs_ext.o \
-           $(BUILD_DIR)/glare_theme.o
+           $(BUILD_DIR)/glare_theme.o $(BUILD_DIR)/glare_draw_fast.o \
+           $(BUILD_DIR)/glare_fx.o $(BUILD_DIR)/glare_terminal.o $(BUILD_DIR)/glare_layout.o
 
 all: $(BIN_DIR) $(BUILD_DIR) $(COREUTILS) $(ASM_OBJS)
 
