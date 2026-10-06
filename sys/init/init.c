@@ -83,6 +83,12 @@ int main(void) {
     mount("devtmpfs", "/dev", "devtmpfs", 0, NULL);
     mount("proc", "/proc", "proc", 0, NULL);
     mount("sysfs", "/sys", "sysfs", 0, NULL);
+    mount("tmpfs", "/run", "tmpfs", 0, "mode=0755");
+    mount("tmpfs", "/tmp", "tmpfs", 0, "mode=1777");
+    mkdir("/dev/shm", 01777);
+    mount("tmpfs", "/dev/shm", "tmpfs", 0, "mode=1777");
+    mkdir("/dev/pts", 0755);
+    mount("devpts", "/dev/pts", "devpts", 0, NULL);
 
     int mod_fd = open("/lib/modules/e1000.ko", O_RDONLY);
     if (mod_fd >= 0) {

@@ -120,34 +120,36 @@ int main(int argc, char **argv) {
     setenv("XDG_RUNTIME_DIR", "/run/user/0", 1);
     setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/run/user/0/bus", 1);
 
-    pid_t xorg_pid = -1;
-    if (access("/tmp/.X11-unix/X0", F_OK) != 0) {
-        printf("\033[1;34m[GLARE]\033[0m Starting X11 Display Server on /dev/tty1...\n");
-        fflush(stdout);
-        xorg_pid = fork();
-        if (xorg_pid == 0) {
-            char *x_args[] = {
-                "/usr/lib/Xorg",
-                ":0",
-                "vt1",
-                "-nolisten", "tcp",
-                "-noreset",
-                "-logfile", "/tmp/Xorg.0.log",
-                NULL
-            };
-            execv("/usr/lib/Xorg", x_args);
-            execv("/usr/bin/Xorg", x_args);
-            exit(1);
+    mkdir("/run/udev", 0755);
+    if (access("/usr/lib/systemd/systemd-udevd", X_OK) == 0) {
+        pid_t u_pid = fork();
+        if (u_pid == 0) {
+            char *u_args[] = {"/usr/lib/systemd/systemd-udevd", "--daemon", NULL};
+            execv("/usr/lib/systemd/systemd-udevd", u_args);
+            exit(0);
         }
-        for (int i = 0; i < 50; i++) {
-            usleep(100000);
-            if (access("/tmp/.X11-unix/X0", F_OK) == 0) break;
+        if (u_pid > 0) waitpid(u_pid, NULL, 0);
+        usleep(100000);
+        if (access("/usr/bin/udevadm", X_OK) == 0) {
+            pid_t t_pid = fork();
+            if (t_pid == 0) {
+                char *t_args[] = {"/usr/bin/udevadm", "trigger", "--action=add", NULL};
+                execv("/usr/bin/udevadm", t_args);
+                exit(0);
+            }
+            if (t_pid > 0) waitpid(t_pid, NULL, 0);
+            pid_t s_pid = fork();
+            if (s_pid == 0) {
+                char *s_args[] = {"/usr/bin/udevadm", "settle", "--timeout=2", NULL};
+                execv("/usr/bin/udevadm", s_args);
+                exit(0);
+            }
+            if (s_pid > 0) waitpid(s_pid, NULL, 0);
         }
-        set_depth_wallpaper();
     }
 
     if (access("/usr/bin/dbus-daemon", X_OK) == 0) {
-        if (access("/var/run/dbus/system_bus_socket", F_OK) != 0) {
+        if (access("/run/dbus/system_bus_socket", F_OK) != 0) {
             pid_t d_pid = fork();
             if (d_pid == 0) {
                 char *d_args[] = {"/usr/bin/dbus-daemon", "--system", "--fork", NULL};
@@ -173,7 +175,42 @@ int main(int argc, char **argv) {
         }
     }
 
-    sleep(1);
+    pid_t xorg_pid = -1;
+    if (access("/tmp/.X11-unix/X0", F_OK) != 0) {
+        printf("\033[1;34m[GLARE]\033[0m Starting X11 Display Server on /dev/tty1...\n");
+        fflush(stdout);
+        xorg_pid = fork();
+        if (xorg_pid == 0) {
+            char *x_args[] = {
+                "/usr/lib/Xorg",
+                ":0",
+                "vt1",
+                "-nolisten", "tcp",
+                "-noreset",
+                "-logfile", "/tmp/Xorg.0.log",
+                NULL
+            };
+            execv("/usr/lib/Xorg", x_args);
+            execv("/usr/bin/Xorg", x_args);
+            exit(1);
+        }
+        for (int i = 0; i < 50; i++) {
+            usleep(100000);
+            if (access("/tmp/.X11-unix/X0", F_OK) == 0) break;
+        }
+        if (access("/usr/bin/udevadm", X_OK) == 0) {
+            pid_t ui_pid = fork();
+            if (ui_pid == 0) {
+                char *ui_args[] = {"/usr/bin/udevadm", "trigger", "--action=add", "--subsystem-match=input", NULL};
+                execv("/usr/bin/udevadm", ui_args);
+                exit(0);
+            }
+            if (ui_pid > 0) waitpid(ui_pid, NULL, 0);
+        }
+        set_depth_wallpaper();
+    }
+
+    usleep(200000);
 
     if (access("/usr/lib/cinnamon-settings-daemon/csd-xsettings", X_OK) == 0) {
         if (fork() == 0) {
