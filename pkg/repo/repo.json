@@ -45,13 +45,6 @@
       "arch": "x86_64",
       "description": "Command line HTTP/HTTPS transfer client",
       "file": "curl.dpk"
-    },
-    {
-      "name": "rare-desktop",
-      "version": "1.0.0",
-      "arch": "x86_64",
-      "description": "Depth Rare Linux Mint-style desktop suite, panel, menu, and handcrafted vector icons",
-      "file": "rare-desktop.dpk"
     }
   ]
 }

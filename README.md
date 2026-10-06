@@ -6,7 +6,7 @@
     █████████▄   Dimensions Node | Bedrock Architecture
     ████████████▄
     ██████████████▄
-    ███████████████▌     86.6% Pure ASM Core | Zero GNU Bloat
+    ███████████████▌     Pure x86-64 ASM Core | Zero GNU Bloat
     ███████████████▌     Kernel: Linux ABI | Toolset: Hinux Native
     ██████████████▀      Raw Silicon. Built From Scratch.
     ████████████▀
@@ -15,22 +15,20 @@
     ███▀
 ```
 
-Depth Hinux is an open-source bedrock operating system engineered from raw silicon. It pairs the 64-bit Linux kernel ABI with a custom, high-performance x86-64 assembly system layer (**86.6% Pure ASM Core**), completely eliminating GNU bloatware, heavy libc wrappers, and runtime overhead.
+Depth Hinux is an open-source bedrock operating system engineered from raw silicon. It pairs the 64-bit Linux kernel ABI with a custom, high-performance x86-64 assembly system layer, completely eliminating GNU bloatware, heavy libc wrappers, and runtime overhead.
 
 ---
 
 ## Key Highlights
 
-- **86.6% Pure x86-64 Assembly Layer**: 27 standalone static assembly utilities and 16 core runtime subsystems with direct `syscall` kernel transitions.
+- **Pure x86-64 Assembly Layer**: 27 standalone static assembly utilities and 16 core runtime subsystems with direct `syscall` kernel transitions.
 - **Zero GNU Bloat**: Free of GPL/GNU toolchains in userspace; native MIT-licensed Hinux command set.
 - **Solid "D" Geometry**: Custom standing-triangle identity rendered in solid ANSI truecolor blocks with zero wireframe gaps.
 - **Dive Package Engine (`dive`)**: Fast package manager with fuzzy name matching (`-install-similiar`), repository indexing, and standalone `.dpk` archives.
 - **Dedicated Community Repository (`pkg/repo/`)**: Open distribution format allowing anyone to build and submit software packages.
 - **Pure ASM Network Manager (`network` / `net`)**: Ultra-compact terminal interface to configure networking, DHCP, nameservers, and gateway routing on bare metal.
 - **Full Hybrid Bootable ISO**: Generates self-contained `boot/depth-hinux.iso` ready to burn or boot under QEMU.
-- **Two Distinct Editions**:
-  - **Depth Bare**: Minimal bedrock TUI running on 25 MB RAM with instant sub-350ms boot.
-  - **Depth Rare**: Linux Mint-inspired desktop environment with panel, app menu, settings, and handcrafted vector SVG icons in deep red (`#8B0000`, `#E61919`) and pitch black (`#0A0A0C`).
+- **Bedrock Performance**: Runs under 25 MB RAM with instant sub-350ms boot.
 
 ---
 
@@ -47,7 +45,7 @@ Depth Hinux is an open-source bedrock operating system engineered from raw silic
 ```
 Depth/
 ├── Makefile             # Unified build, ISO creation, and QEMU virtual machine runners
-├── sys/                 # 86.6% Pure x86-64 assembly system layer
+├── sys/                 # Pure x86-64 assembly system layer
 │   ├── asm/             # Native syscall dispatches, memory allocators, string SIMD
 │   ├── coreutils/       # Standalone ASM binaries (echo, cat, ls, network, etc.)
 │   └── init/            # Static Bedrock PID 1 init system (node setup, VT console)
@@ -61,9 +59,7 @@ Depth/
 │   ├── build-initrd.sh  # Standalone initramfs packaging script
 │   ├── build-iso.sh     # Hybrid bootable ISO generator (depth-hinux.iso)
 │   └── isolinux/        # Syslinux bootloader components
-├── installer/           # Automated partition cutting and merging installer
-├── editions/            # Bare TUI configuration and Rare desktop assets
-└── assets/              # Handcrafted vector SVG iconography
+└── installer/           # Automated partition cutting and merging installer
 ```
 
 ---

@@ -12,8 +12,7 @@ pkg/repo/
 │   ├── fastfetch.dpk
 │   ├── google-chrome.dpk
 │   ├── nano.dpk
-│   ├── curl.dpk
-│   └── rare-desktop.dpk
+│   └── curl.dpk
 └── recipes/           Package recipes and build blueprints
 ```
 
