@@ -6,54 +6,52 @@ kernel:
 	$(MAKE) -C sys/kernel
 
 bare:
-	@if [ -t 0 ] && [ -z "$(BOOT_ARCH)" ]; then \
-		printf "Select bootloader target architecture:\n  [1] MBR (CSM / Legacy BIOS Bootloader)\n  [2] GPT (UEFI 64-bit Bootloader)\nSelect [1/2, default 2]: "; \
+	@target_arch="$(BOOT_ARCH)"; \
+	if [ -z "$$target_arch" ]; then \
+		printf "Select bootloader architecture:\n  [1] UEFI (GPT 64-bit Bootloader)\n  [2] Legacy BIOS (MBR / CSM Bootloader)\nSelect [1/2, default 1]: "; \
 		read -r arch_ans; \
-		if [ "$$arch_ans" = "1" ] || [ "$$arch_ans" = "mbr" ]; then \
-			$(MAKE) build-target MODE=bare BOOT_ARCH=mbr; \
-		else \
-			$(MAKE) build-target MODE=bare BOOT_ARCH=gpt; \
-		fi; \
-	else \
-		$(MAKE) build-target MODE=bare BOOT_ARCH=$(if $(BOOT_ARCH),$(BOOT_ARCH),gpt); \
-	fi
-
-glare:
-	@if [ -t 0 ] && [ -z "$(BOOT_ARCH)" ]; then \
-		printf "Select bootloader target architecture:\n  [1] MBR (CSM / Legacy BIOS Bootloader)\n  [2] GPT (UEFI 64-bit Bootloader)\nSelect [1/2, default 2]: "; \
-		read -r arch_ans; \
-		if [ "$$arch_ans" = "1" ] || [ "$$arch_ans" = "mbr" ]; then \
-			$(MAKE) build-target MODE=glare BOOT_ARCH=mbr; \
-		else \
-			$(MAKE) build-target MODE=glare BOOT_ARCH=gpt; \
-		fi; \
-	else \
-		$(MAKE) build-target MODE=glare BOOT_ARCH=$(if $(BOOT_ARCH),$(BOOT_ARCH),gpt); \
-	fi
-
-build:
-	@target_mode="$(MODE)"; \
-	target_arch="$(BOOT_ARCH)"; \
-	if [ -t 0 ] && [ -z "$$target_mode" ]; then \
-		printf "Select Depth Hinux target mode:\n  [1] bare  (Bedrock minimal CLI)\n  [2] glare (Cinnamon Desktop Environment)\nSelect [1/2, default 1]: "; \
-		read -r mode_ans; \
-		if [ "$$mode_ans" = "2" ] || [ "$$mode_ans" = "glare" ]; then \
-			target_mode="glare"; \
-		else \
-			target_mode="bare"; \
-		fi; \
-	fi; \
-	target_mode="$${target_mode:-bare}"; \
-	if [ -t 0 ] && [ -z "$$target_arch" ]; then \
-		printf "Select bootloader target architecture:\n  [1] MBR (CSM / Legacy BIOS Bootloader)\n  [2] GPT (UEFI 64-bit Bootloader)\nSelect [1/2, default 2]: "; \
-		read -r arch_ans; \
-		if [ "$$arch_ans" = "1" ] || [ "$$arch_ans" = "mbr" ]; then \
+		if [ "$$arch_ans" = "2" ] || [ "$$arch_ans" = "legacy" ] || [ "$$arch_ans" = "bios" ] || [ "$$arch_ans" = "mbr" ]; then \
 			target_arch="mbr"; \
 		else \
 			target_arch="gpt"; \
 		fi; \
 	fi; \
-	target_arch="$${target_arch:-gpt}"; \
+	$(MAKE) build-target MODE=bare BOOT_ARCH="$$target_arch"
+
+glare:
+	@target_arch="$(BOOT_ARCH)"; \
+	if [ -z "$$target_arch" ]; then \
+		printf "Select bootloader architecture:\n  [1] UEFI (GPT 64-bit Bootloader)\n  [2] Legacy BIOS (MBR / CSM Bootloader)\nSelect [1/2, default 1]: "; \
+		read -r arch_ans; \
+		if [ "$$arch_ans" = "2" ] || [ "$$arch_ans" = "legacy" ] || [ "$$arch_ans" = "bios" ] || [ "$$arch_ans" = "mbr" ]; then \
+			target_arch="mbr"; \
+		else \
+			target_arch="gpt"; \
+		fi; \
+	fi; \
+	$(MAKE) build-target MODE=glare BOOT_ARCH="$$target_arch"
+
+build:
+	@target_mode="$(MODE)"; \
+	target_arch="$(BOOT_ARCH)"; \
+	if [ -z "$$target_mode" ]; then \
+		printf "Select Depth Hinux edition:\n  [1] Glare (Cinnamon Desktop Environment)\n  [2] Bare  (Bedrock minimal CLI)\nSelect [1/2, default 1]: "; \
+		read -r mode_ans; \
+		if [ "$$mode_ans" = "2" ] || [ "$$mode_ans" = "bare" ]; then \
+			target_mode="bare"; \
+		else \
+			target_mode="glare"; \
+		fi; \
+	fi; \
+	if [ -z "$$target_arch" ]; then \
+		printf "Select bootloader architecture:\n  [1] UEFI (GPT 64-bit Bootloader)\n  [2] Legacy BIOS (MBR / CSM Bootloader)\nSelect [1/2, default 1]: "; \
+		read -r arch_ans; \
+		if [ "$$arch_ans" = "2" ] || [ "$$arch_ans" = "legacy" ] || [ "$$arch_ans" = "bios" ] || [ "$$arch_ans" = "mbr" ]; then \
+			target_arch="mbr"; \
+		else \
+			target_arch="gpt"; \
+		fi; \
+	fi; \
 	$(MAKE) build-target MODE="$$target_mode" BOOT_ARCH="$$target_arch"
 
 build-target:
@@ -94,7 +92,10 @@ run:
 		-no-reboot
 
 run-iso:
-	@if [ "$$(python3 -c \"import os; d=open('boot/depth-hinux.iso','rb').read(1024) if os.path.exists('boot/depth-hinux.iso') else b''; print('gpt' if b'EFI PART' in d else 'mbr')\")" = "gpt" ] || [ "$(BOOT_ARCH)" = "gpt" ]; then \
+	@if [ ! -f boot/depth-hinux.iso ]; then \
+		$(MAKE) iso; \
+	fi; \
+	if head -c 1024 boot/depth-hinux.iso 2>/dev/null | grep -q "EFI PART" || [ "$(BOOT_ARCH)" = "gpt" ] || [ "$(BOOT_ARCH)" = "uefi" ]; then \
 		qemu-system-x86_64 \
 			$(KVM_OPTS) \
 			-bios /usr/share/edk2/x64/OVMF.4m.fd \

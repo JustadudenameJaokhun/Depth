@@ -77,18 +77,18 @@ Depth/
 
 ### Interactive Build & Target Selection
 
-When running `make`, `make build`, `make bare`, or `make glare`, the build system interactively prompts for your desired edition and boot architecture:
+When running `make`, `make iso`, `make build`, `make bare`, or `make glare`, the build system interactively prompts for your desired edition and boot architecture:
 
 ```
-Select Depth Hinux target mode:
-  [1] bare  (Bedrock minimal CLI)
-  [2] glare (Cinnamon Desktop Environment)
+Select Depth Hinux edition:
+  [1] Glare (Cinnamon Desktop Environment)
+  [2] Bare  (Bedrock minimal CLI)
 Select [1/2, default 1]:
 
-Select bootloader target architecture:
-  [1] MBR (CSM / Legacy BIOS Bootloader)
-  [2] GPT (UEFI 64-bit Bootloader)
-Select [1/2, default 2]:
+Select bootloader architecture:
+  [1] UEFI (GPT 64-bit Bootloader)
+  [2] Legacy BIOS (MBR / CSM Bootloader)
+Select [1/2, default 1]:
 ```
 
 ### Direct Automated Builds
