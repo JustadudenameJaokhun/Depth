@@ -15,6 +15,12 @@
       "sha256": "380711c4bebb1c1f813fe3dd6807c6352e6506c565850760d1fcdcbec533cc12"
     },
     {
+      "name": "git",
+      "file": "git.dpk",
+      "size": 2692432,
+      "sha256": "84de0365305076706f4224d6d88bcce70753b26eb98b2c5264cc664e753f58c4"
+    },
+    {
       "name": "fastfetch",
       "file": "fastfetch.dpk",
       "size": 2755388,

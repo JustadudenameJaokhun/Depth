@@ -1,0 +1,7 @@
+{
+  "uuid": "depth-network@depth.org",
+  "name": "Depth Network",
+  "description": "Depth Hinux Native Network Driver Monitor",
+  "icon": "network-wired",
+  "max-instances": 1
+}

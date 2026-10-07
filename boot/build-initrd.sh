@@ -31,6 +31,21 @@ cp -f /usr/bin/bash "$STAGING"/bin/bash
 ln -sf /bin/bash "$STAGING"/bin/sh
 ln -sf /bin/bash "$STAGING"/usr/bin/bash
 ln -sf /bin/bash "$STAGING"/usr/bin/sh
+if [ -f /usr/bin/nano ]; then
+    cp -f /usr/bin/nano "$STAGING"/bin/nano
+    ln -sf /bin/nano "$STAGING"/usr/bin/nano
+    chmod +x "$STAGING"/bin/nano
+fi
+mkdir -p "$STAGING"/usr/share/terminfo/l "$STAGING"/usr/share/terminfo/x
+cp -f /usr/share/terminfo/l/linux "$STAGING"/usr/share/terminfo/l/ 2>/dev/null || true
+cp -f /usr/share/terminfo/x/xterm* "$STAGING"/usr/share/terminfo/x/ 2>/dev/null || true
+ln -sf /bin/depth-part "$STAGING"/bin/depthpart
+ln -sf /bin/depth-part "$STAGING"/bin/part
+ln -sf /bin/depth-part "$STAGING"/usr/bin/depth-part
+ln -sf /bin/depth-part "$STAGING"/usr/bin/depthpart
+ln -sf /bin/depth-part "$STAGING"/usr/bin/part
+ln -sf /bin/hinux-driverd "$STAGING"/bin/hinux-driverd
+ln -sf /bin/hinux-driverd "$STAGING"/usr/bin/hinux-driverd
 cp -f /usr/bin/fastfetch "$STAGING"/bin/fastfetch
 cp -f /usr/bin/ip "$STAGING"/bin/ip 2>/dev/null || true
 cp -f /usr/bin/tar "$STAGING"/bin/tar 2>/dev/null || true
@@ -40,7 +55,11 @@ chmod +x "$STAGING"/bin/fastfetch "$STAGING"/bin/bash "$STAGING"/bin/ip "$STAGIN
 cp -f /home/jaokhun/Projects/Depth/pkg/repo/recipes/fastfetch.json "$STAGING"/etc/fastfetch/config.jsonc
 cp -f /home/jaokhun/Projects/Depth/pkg/repo/recipes/depth_logo.txt "$STAGING"/etc/fastfetch/depth_logo.txt
 
-cp -rf /home/jaokhun/Projects/Depth/pkg/repo/packages/* "$STAGING"/var/cache/dive/packages/ 2>/dev/null || true
+for p in /home/jaokhun/Projects/Depth/pkg/repo/packages/*.dpk; do
+    if [ "$(basename "$p")" != "firefox.dpk" ]; then
+        cp -f "$p" "$STAGING"/var/cache/dive/packages/ 2>/dev/null || true
+    fi
+done
 cp -f /home/jaokhun/Projects/Depth/pkg/repo/repo.json "$STAGING"/etc/dive/repo.json 2>/dev/null || true
 
 printf "dimensions\n" > "$STAGING"/etc/hostname
@@ -369,8 +388,13 @@ PYEOF
     mkdir -p "$STAGING"/usr/share/backgrounds/gnome
     cp -f "$STAGING"/usr/share/backgrounds/depth-wallpaper.png "$STAGING"/usr/share/backgrounds/gnome/adwaita-l.jxl 2>/dev/null || true
     cp -f "$STAGING"/usr/share/backgrounds/depth-wallpaper.png "$STAGING"/usr/share/backgrounds/gnome/adwaita-d.jxl 2>/dev/null || true
-    printf "[org.nemo.preferences]\ntreat-root-as-normal=true\nshow-desktop-icons=true\n\n[org.nemo.desktop]\nshow-desktop-icons=true\nbackground-fade=false\n\n[org.gnome.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#d32f2f'\nsecondary-color='#08080c'\ncolor-shading-type='solid'\n\n[org.gnome.desktop.interface]\nicon-theme='Flat-Remix-Red-Dark'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#d32f2f'\nsecondary-color='#08080c'\ncolor-shading-type='solid'\n\n[org.cinnamon.desktop.interface]\nicon-theme='Flat-Remix-Red-Dark'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon.desktop.default-applications.terminal]\nexec='gnome-terminal'\nexec-arg='--'\n\n[org.gnome.Terminal.ProfilesList]\ndefault='b1dcc9dd-5262-4d8d-a863-c897e6d979b9'\nlist=['b1dcc9dd-5262-4d8d-a863-c897e6d979b9']\n\n[org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/]\nvisible-name='Depth'\nbackground-color='#101114'\nforeground-color='#f0f0f0'\nuse-theme-colors=false\ndefault-size-columns=80\ndefault-size-rows=24\n\n[org.cinnamon]\ndesktop-effects=true\ndesktop-effects-on-menus=false\nwindow-effect-speed=2\nstartup-animation=false\nalttab-switcher-delay=0\napp-menu-label='Depth'\napp-menu-icon-name='/usr/share/icons/depth-triangle.svg'\n\n[org.cinnamon.muffin]\nunredirect-fullscreen-windows=true\nattach-modal-dialogs=true\n\n[org.cinnamon.theme]\nname='Default'\n" > "$STAGING"/usr/share/glib-2.0/schemas/99_depth.gschema.override
+    printf "[org.nemo.preferences]\ntreat-root-as-normal=true\nshow-desktop-icons=true\n\n[org.nemo.desktop]\nshow-desktop-icons=true\nbackground-fade=false\n\n[org.gnome.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#d32f2f'\nsecondary-color='#08080c'\ncolor-shading-type='solid'\n\n[org.gnome.desktop.interface]\nicon-theme='Flat-Remix-Red-Dark'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#d32f2f'\nsecondary-color='#08080c'\ncolor-shading-type='solid'\n\n[org.cinnamon.desktop.interface]\nicon-theme='Flat-Remix-Red-Dark'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon.desktop.default-applications.terminal]\nexec='gnome-terminal'\nexec-arg='--'\n\n[org.gnome.Terminal.ProfilesList]\ndefault='b1dcc9dd-5262-4d8d-a863-c897e6d979b9'\nlist=['b1dcc9dd-5262-4d8d-a863-c897e6d979b9']\n\n[org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/]\nvisible-name='Depth'\nbackground-color='#101114'\nforeground-color='#f0f0f0'\nuse-theme-colors=false\ndefault-size-columns=80\ndefault-size-rows=24\n\n[org.cinnamon]\ndesktop-effects=true\ndesktop-effects-on-menus=false\nwindow-effect-speed=2\nstartup-animation=false\nalttab-switcher-delay=0\napp-menu-label='Depth'\napp-menu-icon-name='/usr/share/icons/depth-triangle.svg'\nenabled-applets=['panel1:left:0:menu@cinnamon.org', 'panel1:left:1:separator@cinnamon.org', 'panel1:left:2:grouped-window-list@cinnamon.org', 'panel1:right:0:systray@cinnamon.org', 'panel1:right:1:notifications@cinnamon.org', 'panel1:right:2:depth-network@depth.org', 'panel1:right:3:depth-power@depth.org', 'panel1:right:4:sound@cinnamon.org', 'panel1:right:5:calendar@cinnamon.org', 'panel1:right:6:cornerbar@cinnamon.org']\n\n[org.cinnamon.muffin]\nunredirect-fullscreen-windows=true\nattach-modal-dialogs=true\n\n[org.cinnamon.theme]\nname='Default'\n" > "$STAGING"/usr/share/glib-2.0/schemas/99_depth.gschema.override
     glib-compile-schemas "$STAGING"/usr/share/glib-2.0/schemas/ 2>/dev/null || true
+    mkdir -p "$STAGING"/usr/share/cinnamon/applets/depth-network@depth.org
+    cp -rf /home/jaokhun/Projects/Depth/sys/glare/applets/depth-network@depth.org/* "$STAGING"/usr/share/cinnamon/applets/depth-network@depth.org/
+    mkdir -p "$STAGING"/usr/share/cinnamon/applets/depth-power@depth.org
+    cp -rf /home/jaokhun/Projects/Depth/sys/glare/applets/depth-power@depth.org/* "$STAGING"/usr/share/cinnamon/applets/depth-power@depth.org/
+    rm -rf "$STAGING"/usr/share/cinnamon/applets/printers@cinnamon.org
     mkdir -p "$STAGING"/root/.config/cinnamon/spices/menu@cinnamon.org
     printf '{"menu-custom":{"type":"switch","default":false,"value":true},"menu-label":{"type":"entry","default":"Menu","value":"Depth"},"menu-icon":{"type":"iconfilechooser","default":"cinnamon-symbolic","value":"/usr/share/icons/depth-triangle.svg"},"menu-icon-size":{"type":"spinbutton","default":32,"value":32.0}}\n' > "$STAGING"/root/.config/cinnamon/spices/menu@cinnamon.org/0.json
     mkdir -p "$STAGING"/tmp/.X11-unix "$STAGING"/run/user/0 "$STAGING"/var/lib/dbus "$STAGING"/etc/X11
@@ -388,6 +412,9 @@ PYEOF
     ln -sf /bin/glare-launcher "$STAGING"/usr/bin/glare-launcher
     ln -sf /bin/cinnamon-autostart "$STAGING"/usr/bin/cinnamon-autostart
     ln -sf /bin/dpk-verify "$STAGING"/usr/bin/dpk-verify
+    ln -sf /bin/hinux-driverd "$STAGING"/usr/bin/hinux-driverd
+    ln -sf /bin/depth-part "$STAGING"/usr/bin/depthpart
+    ln -sf /bin/depth-part "$STAGING"/usr/bin/part
     cat << 'EOF' > "$STAGING"/etc/X11/xorg.conf
 Section "Device"
     Identifier "Card0"
@@ -483,8 +510,10 @@ if os.path.isdir(py_dir):
     prune_dirs = [
         "site-packages/mesonbuild", "site-packages/pygments", "site-packages/vapoursynth",
         "site-packages/pyverbs", "site-packages/lxml", "site-packages/setuptools",
-        "site-packages/blueman", "config-3.14-x86_64-linux-gnu", "idlelib", "ensurepip",
-        "tkinter", "test", "unittest", "pydoc_data"
+        "site-packages/blueman", "site-packages/PIL", "site-packages/urllib3",
+        "site-packages/mako", "site-packages/markdown", "site-packages/wheel",
+        "config-3.14-x86_64-linux-gnu", "idlelib", "ensurepip",
+        "tkinter", "test", "unittest", "pydoc_data", "turtledemo"
     ]
     for pd in prune_dirs:
         full_pd = os.path.join(py_dir, pd)
@@ -494,12 +523,27 @@ if os.path.isdir(py_dir):
         if "__pycache__" in dirs:
             subprocess.call(["rm", "-rf", os.path.join(root, "__pycache__")])
 
+for idir in ["usr/share/icons/Adwaita", "usr/share/icons/hicolor"]:
+    full_idir = os.path.join(staging, idir)
+    if os.path.isdir(full_idir):
+        for item in ["64x64", "96x96", "128x128", "256x256", "512x512", "cursors"]:
+            tgt = os.path.join(full_idir, item)
+            if os.path.exists(tgt):
+                subprocess.call(["rm", "-rf", tgt])
+
+ff_dir = os.path.join(staging, "usr/lib/firefox")
+if os.path.isdir(ff_dir):
+    for rem in ["gmp-clearkey", "libmozinference.so"]:
+        tgt = os.path.join(ff_dir, rem)
+        if os.path.exists(tgt):
+            subprocess.call(["rm", "-rf", tgt])
+
 for root, dirs, files in os.walk(staging):
     for f in files:
         p = os.path.join(root, f)
         if os.path.islink(p):
             continue
-        if p.endswith(".so") or ".so." in f or f in ["cinnamon", "muffin", "nemo", "Xorg", "python3", "cjs", "dbus-daemon", "systemd-udevd", "udevadm", "glare"]:
+        if p.endswith(".so") or ".so." in f or os.access(p, os.X_OK):
             subprocess.call(["strip", "--strip-unneeded", p], stderr=subprocess.DEVNULL)
 PYEOF
 
@@ -507,5 +551,5 @@ printf "/usr/lib\n/usr/lib64\n/lib\n/lib64\n/usr/lib/cinnamon\n/usr/lib/muffin\n
 ldconfig -r "$STAGING" 2>/dev/null || true
 
 cd "$STAGING"
-find . -print0 | cpio --null --create --format=newc --owner 0:0 | gzip -6 > /home/jaokhun/Projects/Depth/boot/depth-bare-initrd.img
+find . -print0 | cpio --null --create --format=newc --owner 0:0 | gzip -9 > /home/jaokhun/Projects/Depth/boot/depth-bare-initrd.img
 rm -rf "$STAGING"

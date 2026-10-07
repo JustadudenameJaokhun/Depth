@@ -254,6 +254,14 @@ int main(int argc, char **argv) {
         }
     }
 
+    if (access("/bin/hinux-driverd", X_OK) == 0) {
+        if (fork() == 0) {
+            char *drv_args[] = {"/bin/hinux-driverd", NULL};
+            execv("/bin/hinux-driverd", drv_args);
+            exit(0);
+        }
+    }
+
     if (access("/usr/lib/dconf-service", X_OK) == 0) {
         if (fork() == 0) {
             char *dc_args[] = {"/usr/lib/dconf-service", NULL};

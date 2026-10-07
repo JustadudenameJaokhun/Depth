@@ -1,0 +1,7 @@
+{
+  "uuid": "depth-power@depth.org",
+  "name": "Depth Battery & Power",
+  "description": "Depth Hinux Native Battery and Power Driver Monitor",
+  "icon": "battery-full-charging",
+  "max-instances": 1
+}

@@ -85,6 +85,7 @@ int main(void) {
     mount("proc", "/proc", "proc", 0, NULL);
     mount("sysfs", "/sys", "sysfs", 0, NULL);
     mount("tmpfs", "/run", "tmpfs", 0, "mode=0755");
+    mkdir("/run/hinux", 0755);
     mount("tmpfs", "/tmp", "tmpfs", 0, "mode=1777");
     mkdir("/dev/shm", 01777);
     mount("tmpfs", "/dev/shm", "tmpfs", 0, "mode=1777");
