@@ -40,37 +40,25 @@ static void ensure_dir(const char *dir) {
 }
 
 static int check_internet_connectivity(void) {
-    FILE *f = fopen("/proc/net/route", "r");
-    int has_route = 0;
-    if (f) {
-        char line[256];
-        while (fgets(line, sizeof(line), f)) {
-            char iface[32];
-            unsigned long dest;
-            if (sscanf(line, "%31s %lx", iface, &dest) == 2) {
-                if (dest == 0 && strcmp(iface, "lo") != 0) {
-                    has_route = 1;
-                    break;
-                }
-            }
-        }
-        fclose(f);
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) return 0;
+    struct timeval tv;
+    tv.tv_sec = 2;
+    tv.tv_usec = 0;
+    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    struct sockaddr_in target;
+    memset(&target, 0, sizeof(target));
+    target.sin_family = AF_INET;
+    target.sin_port = htons(53);
+    target.sin_addr.s_addr = inet_addr("1.1.1.1");
+    int res = connect(sock, (struct sockaddr *)&target, sizeof(target));
+    if (res != 0) {
+        target.sin_addr.s_addr = inet_addr("8.8.8.8");
+        res = connect(sock, (struct sockaddr *)&target, sizeof(target));
     }
-    if (!has_route) {
-        int sock = socket(AF_INET, SOCK_DGRAM, 0);
-        if (sock >= 0) {
-            struct sockaddr_in target;
-            memset(&target, 0, sizeof(target));
-            target.sin_family = AF_INET;
-            target.sin_port = htons(53);
-            target.sin_addr.s_addr = inet_addr("10.0.2.3");
-            if (connect(sock, (struct sockaddr *)&target, sizeof(target)) == 0) {
-                has_route = 1;
-            }
-            close(sock);
-        }
-    }
-    return has_route;
+    close(sock);
+    return (res == 0) ? 1 : 0;
 }
 
 static void print_banner(void) {
@@ -591,18 +579,13 @@ static int cmd_install(const char *pkg_target) {
         return 1;
     }
 
-    int online = check_internet_connectivity();
-    if (!online && access(pkg_target, R_OK) != 0) {
-        char check_cached[512];
-        snprintf(check_cached, sizeof(check_cached), "/var/cache/dive/packages/%s.dpk", pkg_target);
-        if (access(check_cached, R_OK) != 0) {
-            snprintf(check_cached, sizeof(check_cached), "pkg/repo/packages/%s.dpk", pkg_target);
-            if (access(check_cached, R_OK) != 0) {
-                fprintf(stderr, "%s[ERROR]%s Internet connection required to download package '%s' from repository.\n", COLOR_RED, COLOR_RESET, pkg_target);
-                fprintf(stderr, "%s[DIVE]%s Network interface is currently offline.\n", COLOR_DARK, COLOR_RESET);
-                printf("%s[TIP]%s Please run 'network' or 'net' to establish internet connection first.\n", COLOR_RED, COLOR_RESET);
-                return 1;
-            }
+    int is_local_file = (access(pkg_target, R_OK) == 0 && (strchr(pkg_target, '/') != NULL || strstr(pkg_target, ".dpk") != NULL));
+    if (!is_local_file) {
+        int online = check_internet_connectivity();
+        if (!online) {
+            fprintf(stderr, "%s[ERROR]%s Cannot download package '%s' from GitHub cloud repository.\n", COLOR_RED, COLOR_RESET, pkg_target);
+            fprintf(stderr, "%s[DIVE]%s Network connection is offline. Please connect to the internet to install packages.\n", COLOR_DARK, COLOR_RESET);
+            return 1;
         }
     }
 
@@ -613,73 +596,50 @@ static int cmd_install(const char *pkg_target) {
 
     char pkg_path[512] = "";
     int is_temp_download = 0;
-    if (access(pkg_target, R_OK) == 0) {
+    if (is_local_file) {
         strncpy(pkg_path, pkg_target, sizeof(pkg_path));
     } else {
-        snprintf(pkg_path, sizeof(pkg_path), "pkg/repo/packages/%s.dpk", pkg_target);
-        if (access(pkg_path, R_OK) != 0) {
-            snprintf(pkg_path, sizeof(pkg_path), "/var/cache/dive/packages/%s.dpk", pkg_target);
-            if (access(pkg_path, R_OK) != 0) {
-                snprintf(pkg_path, sizeof(pkg_path), "/etc/dive/packages/%s.dpk", pkg_target);
-                if (access(pkg_path, R_OK) != 0) {
-                    char split_test[512];
-                    snprintf(split_test, sizeof(split_test), "pkg/repo/packages/%s.dpk.00", pkg_target);
-                    if (access(split_test, R_OK) != 0) {
-                        snprintf(split_test, sizeof(split_test), "/var/cache/dive/packages/%s.dpk.00", pkg_target);
-                    }
-                    if (access(split_test, R_OK) == 0) {
-                        char tmp_target[512];
-                        snprintf(tmp_target, sizeof(tmp_target), "/tmp/%s.dpk", pkg_target);
-                        if (cmd_merge(split_test, tmp_target) == 0) {
-                            strncpy(pkg_path, tmp_target, sizeof(pkg_path));
-                            is_temp_download = 1;
-                        }
-                    } else {
-                        printf("%s[DIVE]%s Package not found locally. Connecting to GitHub cloud repository...\n", COLOR_RED, COLOR_RESET);
-                        char tmp_target[512];
-                        snprintf(tmp_target, sizeof(tmp_target), "/tmp/%s.dpk", pkg_target);
-                        char cloud_url[512];
-                        snprintf(cloud_url, sizeof(cloud_url), "https://raw.githubusercontent.com/JustadudenameJaokhun/Depth/main/pkg/repo/packages/%s.dpk", pkg_target);
-                        char dl_cmd[1024];
-                        snprintf(dl_cmd, sizeof(dl_cmd), "curl -f -L -s -o \"%s\" \"%s\"", tmp_target, cloud_url);
-                        if (system(dl_cmd) == 0 && access(tmp_target, R_OK) == 0) {
-                            strncpy(pkg_path, tmp_target, sizeof(pkg_path));
-                            is_temp_download = 1;
-                        } else {
-                            int part = 0;
-                            int has_chunks = 0;
-                            while (part < 50) {
-                                char chunk_dest[512];
-                                snprintf(chunk_dest, sizeof(chunk_dest), "/tmp/%s.dpk.%02d", pkg_target, part);
-                                char chunk_url[512];
-                                snprintf(chunk_url, sizeof(chunk_url), "https://raw.githubusercontent.com/JustadudenameJaokhun/Depth/main/pkg/repo/packages/%s.dpk.%02d", pkg_target, part);
-                                snprintf(dl_cmd, sizeof(dl_cmd), "curl -f -L -s -o \"%s\" \"%s\"", chunk_dest, chunk_url);
-                                if (system(dl_cmd) != 0 || access(chunk_dest, R_OK) != 0) break;
-                                printf("  + Retrieved cloud section %02d [%s]\n", part, chunk_dest);
-                                has_chunks = 1;
-                                part++;
-                            }
-                            if (has_chunks) {
-                                char first_part[512];
-                                snprintf(first_part, sizeof(first_part), "/tmp/%s.dpk.00", pkg_target);
-                                if (cmd_merge(first_part, tmp_target) == 0) {
-                                    strncpy(pkg_path, tmp_target, sizeof(pkg_path));
-                                    is_temp_download = 1;
-                                }
-                                for (int p = 0; p < part; p++) {
-                                    char rem_c[512];
-                                    snprintf(rem_c, sizeof(rem_c), "/tmp/%s.dpk.%02d", pkg_target, p);
-                                    unlink(rem_c);
-                                }
-                            }
-                        }
-                    }
+        printf("%s[DIVE]%s Connecting to GitHub cloud repository for '%s'...\n", COLOR_RED, COLOR_RESET, pkg_target);
+        char tmp_target[512];
+        snprintf(tmp_target, sizeof(tmp_target), "/tmp/%s.dpk", pkg_target);
+        char cloud_url[512];
+        snprintf(cloud_url, sizeof(cloud_url), "https://raw.githubusercontent.com/JustadudenameJaokhun/Depth/main/pkg/repo/packages/%s.dpk", pkg_target);
+        char dl_cmd[1024];
+        snprintf(dl_cmd, sizeof(dl_cmd), "curl -f -L -s --connect-timeout 5 -o \"%s\" \"%s\"", tmp_target, cloud_url);
+        if (system(dl_cmd) == 0 && access(tmp_target, R_OK) == 0) {
+            strncpy(pkg_path, tmp_target, sizeof(pkg_path));
+            is_temp_download = 1;
+        } else {
+            int part = 0;
+            int has_chunks = 0;
+            while (part < 50) {
+                char chunk_dest[512];
+                snprintf(chunk_dest, sizeof(chunk_dest), "/tmp/%s.dpk.%02d", pkg_target, part);
+                char chunk_url[512];
+                snprintf(chunk_url, sizeof(chunk_url), "https://raw.githubusercontent.com/JustadudenameJaokhun/Depth/main/pkg/repo/packages/%s.dpk.%02d", pkg_target, part);
+                snprintf(dl_cmd, sizeof(dl_cmd), "curl -f -L -s --connect-timeout 5 -o \"%s\" \"%s\"", chunk_dest, chunk_url);
+                if (system(dl_cmd) != 0 || access(chunk_dest, R_OK) != 0) break;
+                printf("  + Retrieved cloud section %02d [%s]\n", part, chunk_dest);
+                has_chunks = 1;
+                part++;
+            }
+            if (has_chunks) {
+                char first_part[512];
+                snprintf(first_part, sizeof(first_part), "/tmp/%s.dpk.00", pkg_target);
+                if (cmd_merge(first_part, tmp_target) == 0) {
+                    strncpy(pkg_path, tmp_target, sizeof(pkg_path));
+                    is_temp_download = 1;
+                }
+                for (int p = 0; p < part; p++) {
+                    char rem_c[512];
+                    snprintf(rem_c, sizeof(rem_c), "/tmp/%s.dpk.%02d", pkg_target, p);
+                    unlink(rem_c);
                 }
             }
         }
     }
     if (strlen(pkg_path) == 0 || access(pkg_path, R_OK) != 0) {
-        fprintf(stderr, "%s[ERROR]%s Cannot locate package archive for '%s' locally or in cloud\n", COLOR_RED, COLOR_RESET, pkg_target);
+        fprintf(stderr, "%s[ERROR]%s Package '%s' was not found in the Depth Hinux cloud repository.\n", COLOR_RED, COLOR_RESET, pkg_target);
         return 1;
     }
 

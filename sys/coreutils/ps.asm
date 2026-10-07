@@ -59,12 +59,14 @@ _start:
     lea rdi, [r15 + 19]
 
     call is_numeric
+    test eax, eax
     jz .skip_entry
 
-    mov rdi, 1
-    lea rsi, [r15 + 19]
+    lea rdi, [r15 + 19]
     call strlen
     mov rdx, rax
+    mov rdi, 1
+    lea rsi, [r15 + 19]
     mov rax, SYS_WRITE
     syscall
 

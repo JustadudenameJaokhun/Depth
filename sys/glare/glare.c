@@ -47,7 +47,7 @@ static void set_depth_wallpaper(void) {
         return;
     }
     for (int y = 0; y < h; y++) {
-        float yr = (float)y / (float)(h > 1 ? h - 1 : 1);
+        float yr = (float)(h - 1 - y) / (float)(h > 1 ? h - 1 : 1);
         for (int x = 0; x < w; x++) {
             float xr = (float)x / (float)(w > 1 ? w - 1 : 1);
             float t = (xr + yr) * 0.5f;
@@ -99,6 +99,7 @@ int main(int argc, char **argv) {
     setenv("NO_AT_BRIDGE", "1", 1);
     setenv("LANG", "C.UTF-8", 1);
     setenv("LC_ALL", "C.UTF-8", 1);
+    setenv("GTK_THEME", "Adwaita:dark", 1);
     setenv("HOME", "/root", 1);
     setenv("USER", "root", 1);
     setenv("LOGNAME", "root", 1);
@@ -286,14 +287,6 @@ int main(int argc, char **argv) {
         if (fork() == 0) {
             char *gt_args[] = {"/usr/lib/gnome-terminal-server", NULL};
             execv("/usr/lib/gnome-terminal-server", gt_args);
-            exit(0);
-        }
-    }
-
-    if (access("/usr/bin/nemo-desktop", X_OK) == 0) {
-        if (fork() == 0) {
-            char *nemo_args[] = {"/usr/bin/nemo-desktop", NULL};
-            execv("/usr/bin/nemo-desktop", nemo_args);
             exit(0);
         }
     }

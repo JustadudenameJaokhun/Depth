@@ -8,9 +8,9 @@ const Util = imports.misc.util;
 class DepthNetworkApplet extends Applet.TextIconApplet {
     constructor(orientation, panel_height, instance_id) {
         super(orientation, panel_height, instance_id);
-        this.set_applet_icon_symbolic_name("network-wired-symbolic");
+        this.set_applet_icon_symbolic_name("network-offline-symbolic");
         this.set_applet_label("");
-        this.set_applet_tooltip("Depth Hinux Network: Connecting...");
+        this.set_applet_tooltip("Depth Network: Scanning hardware...");
 
         this.menuManager = new PopupMenu.PopupMenuManager(this);
         this.menu = new Applet.AppletPopupMenu(this, orientation);
@@ -20,16 +20,16 @@ class DepthNetworkApplet extends Applet.TextIconApplet {
         this.menu.addMenuItem(this.titleItem);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        this.ifaceItem = new PopupMenu.PopupMenuItem("Interface: eth0", { reactive: false });
+        this.ifaceItem = new PopupMenu.PopupMenuItem("Interface: Scanning...", { reactive: false });
         this.menu.addMenuItem(this.ifaceItem);
 
-        this.statusItem = new PopupMenu.PopupMenuItem("Status: Connected", { reactive: false });
+        this.statusItem = new PopupMenu.PopupMenuItem("Status: Disconnected", { reactive: false });
         this.menu.addMenuItem(this.statusItem);
 
-        this.ipItem = new PopupMenu.PopupMenuItem("IPv4: 10.0.2.15", { reactive: false });
+        this.ipItem = new PopupMenu.PopupMenuItem("IPv4: Not assigned", { reactive: false });
         this.menu.addMenuItem(this.ipItem);
 
-        this.speedItem = new PopupMenu.PopupMenuItem("Link Speed: 1000 Mb/s", { reactive: false });
+        this.speedItem = new PopupMenu.PopupMenuItem("Link Speed: Offline", { reactive: false });
         this.menu.addMenuItem(this.speedItem);
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -49,11 +49,12 @@ class DepthNetworkApplet extends Applet.TextIconApplet {
     _readStatus() {
         let path = "/run/hinux/net.stat";
         let data = {
-            iface: "eth0",
-            status: "connected",
-            ip: "10.0.2.15",
-            speed: "1000Mb/s",
-            carrier: "1"
+            iface: "none",
+            status: "disconnected",
+            type: "none",
+            ip: "none",
+            speed: "0",
+            carrier: "0"
         };
         try {
             if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
@@ -67,6 +68,7 @@ class DepthNetworkApplet extends Applet.TextIconApplet {
                             let v = parts[1].trim();
                             if (k === "INTERFACE") data.iface = v;
                             if (k === "STATUS") data.status = v;
+                            if (k === "TYPE") data.type = v;
                             if (k === "IP") data.ip = v;
                             if (k === "SPEED") data.speed = v;
                             if (k === "CARRIER") data.carrier = v;
@@ -81,21 +83,26 @@ class DepthNetworkApplet extends Applet.TextIconApplet {
 
     _updateLoop() {
         let info = this._readStatus();
-        let isOnline = (info.carrier === "1" || info.status === "connected");
+        let isOnline = (info.carrier === "1" && info.status === "connected" && info.ip !== "none" && info.ip !== "");
+        let isWireless = (info.type === "wireless" || info.iface.startsWith("wl"));
 
         if (isOnline) {
-            this.set_applet_icon_symbolic_name("network-wired-symbolic");
-            this.set_applet_tooltip("Depth Network: Connected (" + info.iface + " - " + info.ip + ")");
+            let iconName = isWireless ? "network-wireless-symbolic" : "network-wired-symbolic";
+            this.set_applet_icon_symbolic_name(iconName);
+            let medium = isWireless ? "Wi-Fi" : "Ethernet";
+            this.set_applet_tooltip("Depth Network: Connected via " + medium + " (" + info.iface + " - " + info.ip + ")");
             this.statusItem.label.text = "Status: Connected (Online)";
+            this.ifaceItem.label.text = "Interface: " + info.iface + " (" + medium + ")";
+            this.ipItem.label.text = "IPv4: " + info.ip;
+            this.speedItem.label.text = "Link Speed: " + (info.speed !== "0" ? info.speed : "Active");
         } else {
             this.set_applet_icon_symbolic_name("network-offline-symbolic");
             this.set_applet_tooltip("Depth Network: Disconnected");
             this.statusItem.label.text = "Status: Disconnected";
+            this.ifaceItem.label.text = "Interface: " + (info.iface !== "none" ? info.iface : "No device");
+            this.ipItem.label.text = "IPv4: Not assigned";
+            this.speedItem.label.text = "Link Speed: Offline";
         }
-
-        this.ifaceItem.label.text = "Interface: " + info.iface;
-        this.ipItem.label.text = "IPv4: " + info.ip;
-        this.speedItem.label.text = "Link Speed: " + info.speed;
 
         Mainloop.timeout_add_seconds(2, () => {
             this._updateLoop();

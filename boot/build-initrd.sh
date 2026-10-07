@@ -43,8 +43,6 @@ ln -sf /bin/depth-part "$STAGING"/bin/depthpart
 ln -sf /bin/depth-part "$STAGING"/bin/part
 ln -sf /bin/depth-part "$STAGING"/usr/bin/depth-part
 ln -sf /bin/depth-part "$STAGING"/usr/bin/depthpart
-ln -sf /bin/depth-part "$STAGING"/usr/bin/part
-ln -sf /bin/hinux-driverd "$STAGING"/bin/hinux-driverd
 ln -sf /bin/hinux-driverd "$STAGING"/usr/bin/hinux-driverd
 ln -sf /bin/rac "$STAGING"/usr/bin/rac
 chmod 4755 "$STAGING"/bin/rac 2>/dev/null || true
@@ -70,17 +68,13 @@ chmod +x "$STAGING"/bin/fastfetch "$STAGING"/bin/bash "$STAGING"/bin/ip "$STAGIN
 cp -f /home/jaokhun/Projects/Depth/pkg/repo/recipes/fastfetch.json "$STAGING"/etc/fastfetch/config.jsonc
 cp -f /home/jaokhun/Projects/Depth/pkg/repo/recipes/depth_logo.txt "$STAGING"/etc/fastfetch/depth_logo.txt
 
-for p in /home/jaokhun/Projects/Depth/pkg/repo/packages/*.dpk; do
-    if [ "$(basename "$p")" != "firefox.dpk" ]; then
-        cp -f "$p" "$STAGING"/var/cache/dive/packages/ 2>/dev/null || true
-    fi
-done
+mkdir -p "$STAGING"/var/cache/dive/packages
 cp -f /home/jaokhun/Projects/Depth/pkg/repo/repo.json "$STAGING"/etc/dive/repo.json 2>/dev/null || true
 
 printf "dimensions\n" > "$STAGING"/etc/hostname
 printf "127.0.0.1\tlocalhost dimensions\n::1\tlocalhost ip6-localhost ip6-loopback\n" > "$STAGING"/etc/hosts
 printf "passwd: files\ngroup: files\nshadow: files\nhosts: files dns\nnetworks: files\nprotocols: files\nservices: files\nethers: files\nrpc: files\n" > "$STAGING"/etc/nsswitch.conf
-printf "nameserver 10.0.2.3\nnameserver 1.1.1.1\nnameserver 8.8.8.8\n" > "$STAGING"/etc/resolv.conf
+printf "nameserver 1.1.1.1\nnameserver 8.8.8.8\nnameserver 10.0.2.3\n" > "$STAGING"/etc/resolv.conf
 printf "export PS1=\"\\[\\033[1;31m\\]depth-hinux \\[\\033[0;31m\\]\\w\\[\\033[1;31m\\] # \\[\\033[0m\\] \"\nalias sudo=\"rac\"\n" > "$STAGING"/etc/bash.bashrc
 printf "export PS1=\"\\[\\033[1;31m\\]depth-hinux \\[\\033[0;31m\\]\\w\\[\\033[1;31m\\] # \\[\\033[0m\\] \"\nalias sudo=\"rac\"\n" > "$STAGING"/root/.bashrc
 printf "root:x:0:0:root:/root:/bin/sh\ndbus:x:81:81:System Message Bus:/:/usr/bin/nologin\npolkitd:x:102:102:PolicyKit Daemon:/:/usr/bin/nologin\navahi:x:84:84:Avahi:/:/usr/bin/nologin\ncolord:x:124:124:Colord:/:/usr/bin/nologin\nsystemd-network:x:192:192:systemd:/:/usr/bin/nologin\nsystemd-oom:x:999:999:systemd:/:/usr/bin/nologin\nsystemd-resolve:x:193:193:systemd:/:/usr/bin/nologin\nsystemd-timesync:x:194:194:systemd:/:/usr/bin/nologin\n" > "$STAGING"/etc/passwd
@@ -133,9 +127,6 @@ mkdir -p /root/.mozilla/firefox/default
 export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 export SSL_CERT_DIR=/etc/ssl/certs
 /bin/ip link set lo up 2>/dev/null || true
-/bin/ip link set eth0 up 2>/dev/null || true
-/bin/ip addr add 10.0.2.15/24 dev eth0 2>/dev/null || true
-/bin/ip route add default via 10.0.2.2 dev eth0 2>/dev/null || true
 chown -R 0:0 /root 2>/dev/null || true
 rm -f /root/.mozilla/firefox/*/.parentlock /root/.mozilla/firefox/*/lock 2>/dev/null || true
 ARGS=""
@@ -168,7 +159,7 @@ EOF
     fi
     mkdir -p "$STAGING"/usr/lib/cinnamon-session
     cp -af /usr/lib/cinnamon-session/* "$STAGING"/usr/lib/cinnamon-session/ 2>/dev/null || true
-    for d in /usr/lib/locale /usr/lib/gio/modules /etc/ssl/certs /usr/share/ca-certificates /usr/lib/xorg/modules /usr/lib/dri /usr/lib/gbm /usr/share/glvnd /usr/share/xkeyboard-config-2 /usr/share/cinnamon /usr/share/cinnamon-session /usr/share/glib-2.0/schemas /usr/lib/cinnamon /usr/lib/cinnamon-settings-daemon /usr/lib/muffin /usr/lib/cjs /usr/lib/gtk-3.0 /usr/lib/xapps /usr/lib/glycin-loaders /usr/share/glycin-loaders /usr/lib/python3.14 /etc/dbus-1 /usr/share/dbus-1 /usr/lib/girepository-1.0 /usr/share/icons/hicolor /usr/share/icons/Adwaita /usr/share/icons/AdwaitaLegacy /usr/share/icons/default /usr/share/applications /usr/share/xsessions /etc/xdg /usr/share/xml/iso-codes /usr/share/mime /usr/lib/udev/rules.d /usr/share/libinput; do
+    for d in /usr/lib/locale /usr/lib/gio/modules /etc/ssl/certs /usr/share/ca-certificates /usr/lib/xorg/modules /usr/lib/dri /usr/lib/gbm /usr/share/glvnd /usr/share/xkeyboard-config-2 /usr/share/cinnamon /usr/share/cinnamon-session /usr/share/glib-2.0/schemas /usr/lib/cinnamon /usr/lib/cinnamon-settings-daemon /usr/lib/muffin /usr/lib/cjs /usr/lib/gtk-3.0 /usr/lib/xapps /usr/lib/glycin-loaders /usr/share/glycin-loaders /usr/lib/python3.14 /etc/dbus-1 /usr/share/dbus-1 /usr/lib/girepository-1.0 /usr/share/icons/hicolor /usr/share/icons/Adwaita /usr/share/icons/AdwaitaLegacy /usr/share/icons/default /usr/share/xsessions /etc/xdg /usr/share/xml/iso-codes /usr/share/mime /usr/lib/udev/rules.d /usr/share/libinput; do
         if [ -d "$d" ]; then
             td="$STAGING"$(dirname "$d")
             mkdir -p "$td"
@@ -178,6 +169,121 @@ EOF
     if [ -x /usr/bin/gio-querymodules ]; then
         gio-querymodules "$STAGING"/usr/lib/gio/modules 2>/dev/null || true
     fi
+    mkdir -p "$STAGING"/usr/share/applications
+    rm -rf "$STAGING"/usr/share/applications/*
+    cat << 'EOF' > "$STAGING"/usr/share/applications/depth-terminal.desktop
+[Desktop Entry]
+Type=Application
+Name=Depth Terminal
+Comment=Command Line Terminal
+Exec=gnome-terminal
+Icon=utilities-terminal
+Terminal=false
+Categories=System;Utility;TerminalEmulator;
+EOF
+    cat << 'EOF' > "$STAGING"/usr/share/applications/firefox.desktop
+[Desktop Entry]
+Type=Application
+Name=Firefox Web Browser
+Comment=Browse the World Wide Web
+Exec=firefox %u
+Icon=firefox
+Terminal=false
+Categories=Network;WebBrowser;
+EOF
+    cat << 'EOF' > "$STAGING"/usr/share/applications/nemo.desktop
+[Desktop Entry]
+Type=Application
+Name=Nemo File Manager
+Comment=Manage files and folders
+Exec=nemo %U
+Icon=system-file-manager
+Terminal=false
+Categories=System;FileManager;Utility;
+EOF
+    cat << 'EOF' > "$STAGING"/usr/share/applications/depth-install.desktop
+[Desktop Entry]
+Type=Application
+Name=Depth OS Installer
+Comment=Install Depth Hinux to storage
+Exec=gnome-terminal -- /bin/depthinstall
+Icon=depth-triangle
+Terminal=false
+Categories=System;
+EOF
+    cat << 'EOF' > "$STAGING"/usr/share/applications/depth-part.desktop
+[Desktop Entry]
+Type=Application
+Name=Drive Partitioner
+Comment=Manage drive partitions and format with X1
+Exec=gnome-terminal -- /bin/depthpart
+Icon=depth-triangle
+Terminal=false
+Categories=System;
+EOF
+    cat << 'EOF' > "$STAGING"/usr/share/applications/depth-network.desktop
+[Desktop Entry]
+Type=Application
+Name=Network Manager
+Comment=Manage network connections
+Exec=gnome-terminal -- /bin/network
+Icon=network-wireless-symbolic
+Terminal=false
+Categories=System;Network;
+EOF
+    cat << 'EOF' > "$STAGING"/usr/share/applications/depth-dive.desktop
+[Desktop Entry]
+Type=Application
+Name=Dive Package Manager
+Comment=Install and update software packages
+Exec=gnome-terminal -- /bin/bash -c "dive help; exec /bin/bash"
+Icon=depth-triangle
+Terminal=false
+Categories=System;
+EOF
+    cat << 'EOF' > "$STAGING"/usr/share/applications/depth-sysinfo.desktop
+[Desktop Entry]
+Type=Application
+Name=System Information
+Comment=Display Depth Hinux system details
+Exec=gnome-terminal -- /bin/bash -c "fastfetch; echo; echo 'Press Enter to exit...'; read -r; exit"
+Icon=depth-triangle
+Terminal=false
+Categories=System;Utility;
+EOF
+    cat << 'EOF' > "$STAGING"/usr/share/applications/depth-text.desktop
+[Desktop Entry]
+Type=Application
+Name=Nano Text Editor
+Comment=Edit text documents
+Exec=gnome-terminal -- /bin/nano
+Icon=text-editor
+Terminal=false
+Categories=Utility;TextEditor;
+EOF
+    mkdir -p "$STAGING"/etc/gtk-3.0 "$STAGING"/root/.config/gtk-3.0 "$STAGING"/etc/gtk-4.0 "$STAGING"/root/.config/gtk-4.0
+    cat << 'EOF' > "$STAGING"/etc/gtk-3.0/settings.ini
+[Settings]
+gtk-theme-name = Adwaita-dark
+gtk-icon-theme-name = Flat-Remix-Red-Dark
+gtk-application-prefer-dark-theme = 1
+gtk-font-name = Liberation Sans 10
+gtk-cursor-theme-name = Adwaita
+EOF
+    cp -f "$STAGING"/etc/gtk-3.0/settings.ini "$STAGING"/root/.config/gtk-3.0/settings.ini
+    cp -f "$STAGING"/etc/gtk-3.0/settings.ini "$STAGING"/etc/gtk-4.0/settings.ini
+    cp -f "$STAGING"/etc/gtk-3.0/settings.ini "$STAGING"/root/.config/gtk-4.0/settings.ini
+    cat << 'EOF' > "$STAGING"/root/.config/gtk-3.0/gtk.css
+window, .background {
+    background-color: #101114;
+    color: #f0f0f0;
+}
+vte-terminal, terminal-window {
+    background-color: #0a0b0d;
+    color: #f0f0f0;
+}
+EOF
+    printf "GTK_THEME=Adwaita:dark\n" >> "$STAGING"/etc/environment
     mkdir -p "$STAGING"/usr/share/X11/xorg.conf.d
     cat << 'EOF' > "$STAGING"/usr/share/X11/xorg.conf.d/40-libinput.conf
 Section "InputClass"
@@ -247,7 +353,7 @@ r_end, g_end, b_end = 8, 8, 12
 buf = bytearray(w * h * 3)
 idx = 0
 for y in range(h):
-    y_r = y / (h - 1)
+    y_r = (h - 1 - y) / (h - 1)
     for x in range(w):
         t = (x / (w - 1) + y_r) * 0.5
         buf[idx] = int((1.0 - t) * r_start + t * r_end)
@@ -364,12 +470,12 @@ nemo_svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" widt
       <feDropShadow dx="0" dy="7" stdDeviation="6" flood-color="#000000" flood-opacity="0.55"/>
     </filter>
     <linearGradient id="back_nemo" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#2a75d3"/>
-      <stop offset="100%" stop-color="#1852a3"/>
+      <stop offset="0%" stop-color="#b71c1c"/>
+      <stop offset="100%" stop-color="#4a0000"/>
     </linearGradient>
     <linearGradient id="front_nemo" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#4da3ff"/>
-      <stop offset="100%" stop-color="#2270d4"/>
+      <stop offset="0%" stop-color="#ff3b3b"/>
+      <stop offset="100%" stop-color="#c62828"/>
     </linearGradient>
     <linearGradient id="paper_nemo" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#ffffff"/>
@@ -382,14 +488,43 @@ nemo_svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" widt
   </defs>
   <path d="M 18 34 C 18 26, 26 24, 32 24 L 52 24 C 58 24, 62 30, 68 34 L 108 34 C 114 34, 118 38, 118 46 L 118 96 C 118 104, 112 110, 104 110 L 24 110 C 16 110, 18 104, 18 96 Z" fill="url(#back_nemo)" filter="url(#ds_nemo)"/>
   <rect x="28" y="32" width="72" height="40" rx="6" ry="6" fill="url(#paper_nemo)" opacity="0.95"/>
-  <line x1="38" y1="42" x2="70" y2="42" stroke="#a0b2cc" stroke-width="3" stroke-linecap="round"/>
-  <line x1="38" y1="50" x2="86" y2="50" stroke="#c2d1e5" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="38" y1="42" x2="70" y2="42" stroke="#ccb0b0" stroke-width="3" stroke-linecap="round"/>
+  <line x1="38" y1="50" x2="86" y2="50" stroke="#d9c2c2" stroke-width="2.5" stroke-linecap="round"/>
   <path d="M 14 48 C 14 42, 20 40, 26 40 L 102 40 C 108 40, 114 42, 114 48 L 114 96 C 114 104, 108 110, 100 110 L 28 110 C 20 110, 14 104, 14 96 Z" fill="url(#front_nemo)"/>
   <path d="M 14 48 C 14 42, 20 40, 26 40 L 102 40 C 108 40, 114 42, 114 48 L 114 54 C 114 48, 108 46, 102 46 L 26 46 C 20 46, 14 48, 14 54 Z" fill="url(#spec_nemo)"/>
-  <path d="M 64 68 L 74 85 L 54 85 Z" fill="#ffffff" opacity="0.25"/>
+  <path d="M 64 68 L 74 85 L 54 85 Z" fill="#ffffff" opacity="0.3"/>
 </svg>'''
 with open(os.path.join(icon_dir, "system-file-manager.svg"), "w") as f:
     f.write(nemo_svg)
+
+fld_svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <filter id="ds_fld" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+    <linearGradient id="back_fld" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#990000"/>
+      <stop offset="100%" stop-color="#420000"/>
+    </linearGradient>
+    <linearGradient id="front_fld" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e52d27"/>
+      <stop offset="100%" stop-color="#b31217"/>
+    </linearGradient>
+    <linearGradient id="paper_fld" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e0e0e0"/>
+    </linearGradient>
+  </defs>
+  <path d="M 18 34 C 18 26, 26 24, 32 24 L 52 24 C 58 24, 62 30, 68 34 L 108 34 C 114 34, 118 38, 118 46 L 118 96 C 118 104, 112 110, 104 110 L 24 110 C 16 110, 18 104, 18 96 Z" fill="url(#back_fld)" filter="url(#ds_fld)"/>
+  <rect x="28" y="32" width="72" height="40" rx="5" ry="5" fill="url(#paper_fld)" opacity="0.95"/>
+  <line x1="38" y1="42" x2="70" y2="42" stroke="#ccb0b0" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="38" y1="50" x2="86" y2="50" stroke="#d9c2c2" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 14 48 C 14 42, 20 40, 26 40 L 102 40 C 108 40, 114 42, 114 48 L 114 96 C 114 104, 108 110, 100 110 L 28 110 C 20 110, 14 104, 14 96 Z" fill="url(#front_fld)"/>
+  <polygon points="64,68 76,88 52,88" fill="#ffffff" opacity="0.85"/>
+  <polygon points="64,74 72,86 56,86" fill="#b31217" opacity="0.9"/>
+</svg>'''
+with open(os.path.join(icon_dir, "depth-folder.svg"), "w") as f:
+    f.write(fld_svg)
 
 subprocess.call(["rsvg-convert", "-w", "96", "-h", "96", os.path.join(icon_dir, "depth-triangle.svg"), "-o", os.path.join(icon_dir, "depth-triangle.png")])
 PYEOF
@@ -407,6 +542,13 @@ PYEOF
     cp -f "$STAGING"/usr/share/icons/system-file-manager.svg "$STAGING"/usr/share/icons/hicolor/scalable/apps/system-file-manager.svg 2>/dev/null || true
     cp -f "$STAGING"/usr/share/icons/system-file-manager.svg "$STAGING"/usr/share/icons/Adwaita/scalable/apps/system-file-manager.svg 2>/dev/null || true
 
+    mkdir -p "$STAGING"/usr/share/icons/Flat-Remix-Red-Dark/places/scalable "$STAGING"/usr/share/icons/Adwaita/scalable/places "$STAGING"/usr/share/icons/hicolor/scalable/places
+    for pl in folder.svg inode-directory.svg user-home.svg user-desktop.svg folder-documents.svg folder-download.svg folder-music.svg folder-pictures.svg folder-videos.svg folder-remote.svg; do
+        cp -f "$STAGING"/usr/share/icons/depth-folder.svg "$STAGING"/usr/share/icons/Flat-Remix-Red-Dark/places/scalable/"$pl" 2>/dev/null || true
+        cp -f "$STAGING"/usr/share/icons/depth-folder.svg "$STAGING"/usr/share/icons/Adwaita/scalable/places/"$pl" 2>/dev/null || true
+        cp -f "$STAGING"/usr/share/icons/depth-folder.svg "$STAGING"/usr/share/icons/hicolor/scalable/places/"$pl" 2>/dev/null || true
+    done
+
     cp -f "$STAGING"/usr/share/icons/utilities-terminal.svg "$STAGING"/usr/share/icons/Flat-Remix-Red-Dark/apps/scalable/utilities-terminal.svg 2>/dev/null || true
     cp -f "$STAGING"/usr/share/icons/utilities-terminal.svg "$STAGING"/usr/share/icons/Flat-Remix-Red-Dark/apps/scalable/org.gnome.Terminal.svg 2>/dev/null || true
     cp -f "$STAGING"/usr/share/icons/utilities-terminal.svg "$STAGING"/usr/share/icons/hicolor/scalable/apps/org.gnome.Terminal.svg 2>/dev/null || true
@@ -422,7 +564,7 @@ PYEOF
     mkdir -p "$STAGING"/usr/share/backgrounds/gnome
     cp -f "$STAGING"/usr/share/backgrounds/depth-wallpaper.png "$STAGING"/usr/share/backgrounds/gnome/adwaita-l.jxl 2>/dev/null || true
     cp -f "$STAGING"/usr/share/backgrounds/depth-wallpaper.png "$STAGING"/usr/share/backgrounds/gnome/adwaita-d.jxl 2>/dev/null || true
-    printf "[org.nemo.preferences]\ntreat-root-as-normal=true\nshow-desktop-icons=true\n\n[org.nemo.desktop]\nshow-desktop-icons=true\nbackground-fade=false\n\n[org.gnome.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#d32f2f'\nsecondary-color='#08080c'\ncolor-shading-type='solid'\n\n[org.gnome.desktop.interface]\nicon-theme='Flat-Remix-Red-Dark'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#d32f2f'\nsecondary-color='#08080c'\ncolor-shading-type='solid'\n\n[org.cinnamon.desktop.interface]\nicon-theme='Flat-Remix-Red-Dark'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon.desktop.default-applications.terminal]\nexec='gnome-terminal'\nexec-arg='--'\n\n[org.gnome.Terminal.ProfilesList]\ndefault='b1dcc9dd-5262-4d8d-a863-c897e6d979b9'\nlist=['b1dcc9dd-5262-4d8d-a863-c897e6d979b9']\n\n[org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/]\nvisible-name='Depth'\nbackground-color='#101114'\nforeground-color='#f0f0f0'\nuse-theme-colors=false\ndefault-size-columns=80\ndefault-size-rows=24\n\n[org.cinnamon]\ndesktop-effects=true\ndesktop-effects-on-menus=false\nwindow-effect-speed=2\nstartup-animation=false\nalttab-switcher-delay=0\napp-menu-label='Depth'\napp-menu-icon-name='/usr/share/icons/depth-triangle.svg'\nenabled-applets=['panel1:left:0:menu@cinnamon.org', 'panel1:left:1:separator@cinnamon.org', 'panel1:left:2:grouped-window-list@cinnamon.org', 'panel1:right:0:systray@cinnamon.org', 'panel1:right:1:notifications@cinnamon.org', 'panel1:right:2:depth-network@depth.org', 'panel1:right:3:depth-power@depth.org', 'panel1:right:4:sound@cinnamon.org', 'panel1:right:5:calendar@cinnamon.org', 'panel1:right:6:cornerbar@cinnamon.org']\n\n[org.cinnamon.muffin]\nunredirect-fullscreen-windows=true\nattach-modal-dialogs=true\n\n[org.cinnamon.theme]\nname='Default'\n" > "$STAGING"/usr/share/glib-2.0/schemas/99_depth.gschema.override
+    printf "[org.nemo.preferences]\ntreat-root-as-normal=true\nshow-desktop-icons=true\n\n[org.nemo.desktop]\nshow-desktop-icons=true\nbackground-fade=false\n\n[org.gnome.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#08080c'\nsecondary-color='#d32f2f'\ncolor-shading-type='solid'\n\n[org.gnome.desktop.interface]\nicon-theme='Flat-Remix-Red-Dark'\ngtk-theme='Adwaita-dark'\ncolor-scheme='prefer-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#08080c'\nsecondary-color='#d32f2f'\ncolor-shading-type='solid'\n\n[org.cinnamon.desktop.interface]\nicon-theme='Flat-Remix-Red-Dark'\ngtk-theme='Adwaita-dark'\ncolor-scheme='prefer-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon.desktop.default-applications.terminal]\nexec='gnome-terminal'\nexec-arg='--'\n\n[org.gnome.Terminal.Legacy.Settings]\ntheme-variant='dark'\nheaderbar=false\n\n[org.gnome.Terminal.ProfilesList]\ndefault='b1dcc9dd-5262-4d8d-a863-c897e6d979b9'\nlist=['b1dcc9dd-5262-4d8d-a863-c897e6d979b9']\n\n[org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/]\nvisible-name='Depth'\nbackground-color='#0a0b0d'\nforeground-color='#f0f0f0'\nuse-theme-colors=false\nbold-color-same-as-fg=true\ncursor-colors-set=true\ncursor-background-color='#ff3333'\ncursor-foreground-color='#ffffff'\ndefault-size-columns=80\ndefault-size-rows=24\n\n[org.cinnamon]\npanels-enabled=['1:0:top']\nfavorite-apps=['depth-terminal.desktop', 'firefox.desktop', 'nemo.desktop', 'depth-install.desktop', 'depth-part.desktop', 'depth-network.desktop']\ndesktop-effects=true\ndesktop-effects-on-menus=false\nwindow-effect-speed=2\nstartup-animation=false\nalttab-switcher-delay=0\napp-menu-label='Depth'\napp-menu-icon-name='/usr/share/icons/depth-triangle.svg'\nenabled-applets=['panel1:left:0:menu@cinnamon.org', 'panel1:left:1:separator@cinnamon.org', 'panel1:left:2:grouped-window-list@cinnamon.org', 'panel1:right:0:systray@cinnamon.org', 'panel1:right:1:notifications@cinnamon.org', 'panel1:right:2:depth-network@depth.org', 'panel1:right:3:depth-power@depth.org', 'panel1:right:4:sound@cinnamon.org', 'panel1:right:5:calendar@cinnamon.org', 'panel1:right:6:cornerbar@cinnamon.org']\n\n[org.cinnamon.muffin]\nunredirect-fullscreen-windows=true\nattach-modal-dialogs=true\n\n[org.cinnamon.theme]\nname='Default'\n" > "$STAGING"/usr/share/glib-2.0/schemas/99_depth.gschema.override
     glib-compile-schemas "$STAGING"/usr/share/glib-2.0/schemas/ 2>/dev/null || true
     mkdir -p "$STAGING"/usr/share/cinnamon/applets/depth-network@depth.org
     cp -rf /home/jaokhun/Projects/Depth/sys/glare/applets/depth-network@depth.org/* "$STAGING"/usr/share/cinnamon/applets/depth-network@depth.org/

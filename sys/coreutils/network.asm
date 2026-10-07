@@ -15,69 +15,67 @@ section .rodata
     banner_l3  db "    █████████▄   Node: dimensions | Hardware Interface Control", 10, 0
     banner_l4  db "=============================================================", 10, 10, 0
 
-    menu_iface_title db "  Detected Network Interfaces in /proc/net/dev:", 10, 0
-    menu_iface_eth0  db "  [*] eth0    (QEMU Virtual / PCI Ethernet)", 10, 0
-    menu_iface_lo    db "  [*] lo      (Software Loopback Device)", 10, 10, 0
+    menu_iface_title db "  Detected Hardware Interfaces in /sys/class/net:", 10, 0
+    bullet_iface     db "  [*] ", 0
+    iface_tag_up     db " (Carrier: UP)", 10, 0
+    iface_tag_down   db " (Carrier: DOWN)", 10, 0
 
-    menu_actions_title db "  Available Operations:", 10, 0
-    menu_act_1 db "  [1] Auto-Configure QEMU Virtual Gateway (DHCP Connect)", 10, 0
-    menu_act_2 db "  [2] Configure DNS Nameservers (10.0.2.3, 1.1.1.1, 8.8.8.8)", 10, 0
-    menu_act_3 db "  [3] Test Network Link Connectivity", 10, 0
+    menu_actions_title db 10, "  Available Operations:", 10, 0
+    menu_act_1 db "  [1] Bring Up All Detected Network Interfaces", 10, 0
+    menu_act_2 db "  [2] Configure DNS Nameservers (1.1.1.1, 8.8.8.8, 10.0.2.3)", 10, 0
+    menu_act_3 db "  [3] Test Real Internet TCP Connectivity (1.1.1.1)", 10, 0
     menu_act_4 db "  [4] Launch Dive Package Engine (-search available apps)", 10, 0
     menu_act_5 db "  [5] Exit Network Console", 10, 10, 0
 
     menu_prompt db "  Select operation [1-5]: ", 0
 
-    net_up_msg1 db 10, "[HINUX NET] Bringing up interface eth0...", 10, 0
-    net_up_msg2 db "[HINUX NET] Assigning IP: 10.0.2.15/24...", 10, 0
-    net_up_msg3 db "[HINUX NET] Setting default gateway: 10.0.2.2...", 10, 0
-    net_up_msg4 db "[HINUX NET] Updating /etc/resolv.conf nameservers...", 10, 0
-    net_ok_msg  db "[HINUX NET] Internet connection ESTABLISHED on eth0!", 10, 0
+    net_scan_err db "  [ERROR] Cannot open /sys/class/net directory", 10, 0
+    net_up_msg1 db 10, "[HINUX NET] Bringing up network interfaces...", 10, 0
+    net_up_msg4 db "[HINUX NET] Updated /etc/resolv.conf with global DNS servers.", 10, 0
+    net_ok_msg  db 10, "[HINUX NET] Real Internet connection ESTABLISHED and verified!", 10, 0
+    net_fail_msg db 10, "[HINUX NET] Connection test FAILED. System is currently OFFLINE.", 10, 0
     net_press_key db 10, "Press ENTER to return to menu...", 0
 
+    path_sys_net db "/sys/class/net", 0
     resolv_path db "/etc/resolv.conf", 0
-    resolv_content db "nameserver 10.0.2.3", 10, "nameserver 1.1.1.1", 10, "nameserver 8.8.8.8", 10, 0
+    resolv_content db "nameserver 1.1.1.1", 10, "nameserver 8.8.8.8", 10, "nameserver 10.0.2.3", 10, 0
 
     ip_path db "/bin/ip", 0
     ip_alt_path db "/usr/bin/ip", 0
 
-    ip_cmd1_a0 db "ip", 0
-    ip_cmd1_a1 db "link", 0
-    ip_cmd1_a2 db "set", 0
-    ip_cmd1_a3 db "eth0", 0
-    ip_cmd1_a4 db "up", 0
+    ip_cmd_up_a0 db "ip", 0
+    ip_cmd_up_a1 db "link", 0
+    ip_cmd_up_a2 db "set", 0
+    ip_cmd_up_a4 db "up", 0
 
-    ip_cmd2_a0 db "ip", 0
-    ip_cmd2_a1 db "addr", 0
-    ip_cmd2_a2 db "add", 0
-    ip_cmd2_a3 db "10.0.2.15/24", 0
-    ip_cmd2_a4 db "dev", 0
-    ip_cmd2_a5 db "eth0", 0
-
-    ip_cmd3_a0 db "ip", 0
-    ip_cmd3_a1 db "route", 0
-    ip_cmd3_a2 db "add", 0
-    ip_cmd3_a3 db "default", 0
-    ip_cmd3_a4 db "via", 0
-    ip_cmd3_a5 db "10.0.2.2", 0
-    ip_cmd3_a6 db "dev", 0
-    ip_cmd3_a7 db "eth0", 0
+    ip_cmd_lo_a3 db "lo", 0
 
     dive_path db "/bin/dive", 0
+    dive_alt_path db "/usr/bin/dive", 0
     dive_cmd_a0 db "dive", 0
-    dive_cmd_a1 db "-search", 0
+    dive_cmd_a1 db "search", 0
+    dive_cmd_a2 db "all", 0
 
     newline db 10, 0
 
 section .data
-    argv_cmd1 dq ip_cmd1_a0, ip_cmd1_a1, ip_cmd1_a2, ip_cmd1_a3, ip_cmd1_a4, 0
-    argv_cmd2 dq ip_cmd2_a0, ip_cmd2_a1, ip_cmd2_a2, ip_cmd2_a3, ip_cmd2_a4, ip_cmd2_a5, 0
-    argv_cmd3 dq ip_cmd3_a0, ip_cmd3_a1, ip_cmd3_a2, ip_cmd3_a3, ip_cmd3_a4, ip_cmd3_a5, ip_cmd3_a6, ip_cmd3_a7, 0
-    argv_dive dq dive_cmd_a0, dive_cmd_a1, 0
+    argv_cmd_lo dq ip_cmd_up_a0, ip_cmd_up_a1, ip_cmd_up_a2, ip_cmd_lo_a3, ip_cmd_up_a4, 0
+    argv_cmd_dyn dq ip_cmd_up_a0, ip_cmd_up_a1, ip_cmd_up_a2, dyn_iface_buf, ip_cmd_up_a4, 0
+    argv_dive dq dive_cmd_a0, dive_cmd_a1, dive_cmd_a2, 0
     envp_empty dq 0
+
+    target_sock:
+        dw 2
+        dw 0x3500
+        dd 0x01010101
+        dq 0
 
 section .bss
     input_buf resb 64
+    dents_buf resb 1024
+    dyn_iface_buf resb 64
+    subpath resb 256
+    io_buf resb 16
 
 section .text
 global _start
@@ -113,14 +111,7 @@ menu_loop:
     lea rdi, [color_reset]
     call print_str
 
-    lea rdi, [color_red]
-    call print_str
-    lea rdi, [menu_iface_eth0]
-    call print_str
-    lea rdi, [menu_iface_lo]
-    call print_str
-    lea rdi, [color_reset]
-    call print_str
+    call scan_and_print_interfaces
 
     lea rdi, [color_bold]
     call print_str
@@ -176,6 +167,159 @@ menu_loop:
 
     jmp menu_loop
 
+scan_and_print_interfaces:
+    push rbp
+    mov rbp, rsp
+    push r12
+    push r13
+
+    mov rax, 2
+    lea rdi, [path_sys_net]
+    mov rsi, 0x10000
+    xor rdx, rdx
+    syscall
+    cmp rax, 0
+    jl .scan_fail
+    mov r12, rax
+
+.read_loop:
+    mov rax, 217
+    mov rdi, r12
+    lea rsi, [dents_buf]
+    mov rdx, 1024
+    syscall
+    test rax, rax
+    jle .done_dents
+
+    xor r13d, r13d
+.iter_dents:
+    cmp r13d, eax
+    jge .read_loop
+
+    lea rbx, [dents_buf + r13]
+    movzx edx, word [rbx + 16]
+    lea rdi, [rbx + 19]
+
+    cmp byte [rdi], '.'
+    je .next_ent
+
+    push rdx
+    push rdi
+    lea rdi, [color_dim]
+    call print_str
+    lea rdi, [bullet_iface]
+    call print_str
+    lea rdi, [color_bold]
+    call print_str
+    lea rdi, [color_red]
+    call print_str
+    pop rdi
+    push rdi
+    call print_str
+    lea rdi, [color_reset]
+    call print_str
+
+    pop rdi
+    push rdi
+    call check_carrier_stat
+    test eax, eax
+    jz .pr_down
+    lea rdi, [color_dim]
+    call print_str
+    lea rdi, [iface_tag_up]
+    call print_str
+    lea rdi, [color_reset]
+    call print_str
+    jmp .ent_fin
+
+.pr_down:
+    lea rdi, [color_dim]
+    call print_str
+    lea rdi, [iface_tag_down]
+    call print_str
+    lea rdi, [color_reset]
+    call print_str
+
+.ent_fin:
+    pop rdi
+    pop rdx
+
+.next_ent:
+    add r13d, edx
+    jmp .iter_dents
+
+.done_dents:
+    mov rax, 3
+    mov rdi, r12
+    syscall
+    pop r13
+    pop r12
+    pop rbp
+    ret
+
+.scan_fail:
+    lea rdi, [net_scan_err]
+    call print_str
+    pop r13
+    pop r12
+    pop rbp
+    ret
+
+check_carrier_stat:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push rsi
+
+    lea rsi, [path_sys_net]
+    lea rdi, [subpath]
+    call str_copy_p
+    mov byte [rdi], '/'
+    inc rdi
+    pop rsi
+    push rsi
+    call str_copy_p
+    mov dword [rdi], 0x72726163
+    mov dword [rdi + 4], 0x00726569
+
+    mov rax, 2
+    lea rdi, [subpath]
+    xor rsi, rsi
+    xor rdx, rdx
+    syscall
+    cmp rax, 0
+    jl .stat_no
+    mov rbx, rax
+
+    mov rax, 0
+    mov rdi, rbx
+    lea rsi, [io_buf]
+    mov rdx, 8
+    syscall
+    mov rdx, rax
+    mov rax, 3
+    mov rdi, rbx
+    syscall
+
+    cmp rdx, 0
+    jle .stat_no
+    cmp byte [io_buf], '1'
+    je .stat_yes
+
+.stat_no:
+    xor eax, eax
+    pop rsi
+    pop rbx
+    pop rbp
+    ret
+
+.stat_yes:
+    mov eax, 1
+    pop rsi
+    pop rbx
+    pop rbp
+    ret
+
 action_connect:
     lea rdi, [color_bold]
     call print_str
@@ -187,44 +331,82 @@ action_connect:
     call print_str
 
     lea rdi, [ip_path]
-    lea rsi, [argv_cmd1]
+    lea rsi, [argv_cmd_lo]
     call run_process
 
-    lea rdi, [color_red]
-    call print_str
-    lea rdi, [net_up_msg2]
-    call print_str
-    lea rdi, [color_reset]
-    call print_str
-
-    lea rdi, [ip_path]
-    lea rsi, [argv_cmd2]
-    call run_process
-
-    lea rdi, [color_red]
-    call print_str
-    lea rdi, [net_up_msg3]
-    call print_str
-    lea rdi, [color_reset]
-    call print_str
-
-    lea rdi, [ip_path]
-    lea rsi, [argv_cmd3]
-    call run_process
-
+    call bring_up_all_interfaces
     call write_resolv
-
-    lea rdi, [color_bold]
-    call print_str
-    lea rdi, [color_red]
-    call print_str
-    lea rdi, [net_ok_msg]
-    call print_str
-    lea rdi, [color_reset]
-    call print_str
 
     call wait_user_return
     jmp menu_loop
+
+bring_up_all_interfaces:
+    push rbp
+    mov rbp, rsp
+    push r12
+    push r13
+
+    mov rax, 2
+    lea rdi, [path_sys_net]
+    mov rsi, 0x10000
+    xor rdx, rdx
+    syscall
+    cmp rax, 0
+    jl .b_done
+    mov r12, rax
+
+.b_read:
+    mov rax, 217
+    mov rdi, r12
+    lea rsi, [dents_buf]
+    mov rdx, 1024
+    syscall
+    test rax, rax
+    jle .b_fin
+
+    xor r13d, r13d
+.b_iter:
+    cmp r13d, eax
+    jge .b_read
+
+    lea rbx, [dents_buf + r13]
+    movzx edx, word [rbx + 16]
+    lea rdi, [rbx + 19]
+
+    cmp byte [rdi], '.'
+    je .b_next
+    cmp word [rdi], 0x6F6C
+    jne .b_act_up
+    cmp byte [rdi + 2], 0
+    je .b_next
+
+.b_act_up:
+    push rdx
+    push rdi
+    lea rsi, [rbx + 19]
+    lea rdi, [dyn_iface_buf]
+    call str_copy_p
+    mov byte [rdi], 0
+
+    lea rdi, [ip_path]
+    lea rsi, [argv_cmd_dyn]
+    call run_process
+    pop rdi
+    pop rdx
+
+.b_next:
+    add r13d, edx
+    jmp .b_iter
+
+.b_fin:
+    mov rax, 3
+    mov rdi, r12
+    syscall
+.b_done:
+    pop r13
+    pop r12
+    pop rbp
+    ret
 
 action_dns:
     call write_resolv
@@ -238,11 +420,46 @@ action_dns:
     jmp menu_loop
 
 action_test:
+    mov rax, 41
+    mov rdi, 2
+    mov rsi, 1
+    xor rdx, rdx
+    syscall
+    cmp rax, 0
+    jl .test_failed
+    mov r12, rax
+
+    mov rax, 42
+    mov rdi, r12
+    lea rsi, [target_sock]
+    mov rdx, 16
+    syscall
+    push rax
+    mov rax, 3
+    mov rdi, r12
+    syscall
+    pop rax
+
+    cmp rax, 0
+    jne .test_failed
+
     lea rdi, [color_bold]
     call print_str
     lea rdi, [color_red]
     call print_str
     lea rdi, [net_ok_msg]
+    call print_str
+    lea rdi, [color_reset]
+    call print_str
+    call wait_user_return
+    jmp menu_loop
+
+.test_failed:
+    lea rdi, [color_bold]
+    call print_str
+    lea rdi, [color_dark]
+    call print_str
+    lea rdi, [net_fail_msg]
     call print_str
     lea rdi, [color_reset]
     call print_str
@@ -332,6 +549,12 @@ run_process:
     lea rdx, [envp_empty]
     syscall
 
+    mov rax, 59
+    lea rdi, [dive_alt_path]
+    mov rsi, r13
+    lea rdx, [envp_empty]
+    syscall
+
     mov rax, 60
     mov rdi, 1
     syscall
@@ -368,4 +591,15 @@ str_len:
     inc rax
     jmp .loop
 .done:
+    ret
+
+str_copy_p:
+.loop:
+    mov al, byte [rsi]
+    mov byte [rdi], al
+    inc rsi
+    inc rdi
+    test al, al
+    jnz .loop
+    dec rdi
     ret

@@ -91,11 +91,8 @@ run:
 		-m 3072M \
 		-no-reboot
 
-run-iso:
-	@if [ ! -f boot/depth-hinux.iso ]; then \
-		$(MAKE) iso; \
-	fi; \
-	if head -c 1024 boot/depth-hinux.iso 2>/dev/null | grep -q "EFI PART" || [ "$(BOOT_ARCH)" = "gpt" ] || [ "$(BOOT_ARCH)" = "uefi" ]; then \
+run-iso: iso
+	@if head -c 1024 boot/depth-hinux.iso 2>/dev/null | grep -q "EFI PART" || [ "$(BOOT_ARCH)" = "gpt" ] || [ "$(BOOT_ARCH)" = "uefi" ]; then \
 		qemu-system-x86_64 \
 			$(KVM_OPTS) \
 			-bios /usr/share/edk2/x64/OVMF.4m.fd \

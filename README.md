@@ -30,7 +30,7 @@ Depth Hinux is an open-source bedrock operating system engineered from raw silic
 - **Dive Package Engine (`dive`)**: Cloud-connected package manager utilizing `.dpk` (Depth Package) archives. Automatically downloads and merges split sections on-the-fly and cleans up temporary archives, preventing local disk bloat.
 - **Pure Assembly Drive Partitioner (`depthpart` / `part`)**: Native x86-64 assembly MBR partition editor and disk scanner with `BLKRRPART` kernel reloading.
 - **Pure Assembly Driver Daemon (`hinux-driverd`)**: Hardware telemetry monitor gathering real-time network and battery metrics into `/run/hinux/`.
-- **Glare Cinnamon Desktop**: Refined desktop experience with an upright red triangle logo, smooth red-to-black diagonal wallpaper, native Mozilla Firefox with preconfigured DNS and SSL certificates, Nemo file manager, and custom taskbar applets (`depth-network@depth.org`, `depth-power@depth.org`).
+- **Glare Cinnamon Desktop**: Refined desktop experience with top-positioned taskbar, an upright red triangle logo, vertically flipped diagonal wallpaper (black on top, deep crimson red on bottom), system-wide dark mode with custom Depth red icons for Nemo and system folders, dark terminal, native Mozilla Firefox, and live hardware telemetry applets (`depth-network@depth.org`, `depth-power@depth.org`).
 - **Hybrid USB Flashdrive Bootable**: Generated hybrid ISO (`boot/depth-hinux.iso`) ready to burn directly to physical USB flashdrives or optical media.
 - **Bedrock Hardware Installer TUI (`depthinstall`)**: Full interactive color TUI with block device discovery, automated X1 encrypted formatting, and live deployment progress bars.
 
@@ -117,8 +117,8 @@ Boots using SeaBIOS and Depth Hinux's custom pure assembly bootloader:
 make run-mbr
 ```
 
-### 3. Auto-Detecting ISO Boot
-Detects whether the generated ISO is formatted for UEFI or MBR and launches appropriate virtual firmware:
+### 3. Rebuild and Boot ISO
+Rebuilds the ISO image with interactive Edition and Architecture prompts, and automatically boots the resulting ISO in QEMU:
 ```bash
 make run-iso
 ```
