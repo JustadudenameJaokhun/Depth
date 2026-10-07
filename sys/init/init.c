@@ -136,6 +136,23 @@ int main(void) {
         fclose(fresolv);
     }
 
+    FILE *fhosts = fopen("/etc/hosts", "w");
+    if (fhosts) {
+        fputs("127.0.0.1\tlocalhost dimensions\n::1\tlocalhost ip6-localhost ip6-loopback\n", fhosts);
+        fclose(fhosts);
+    }
+
+    FILE *fnss = fopen("/etc/nsswitch.conf", "w");
+    if (fnss) {
+        fputs("passwd: files\ngroup: files\nshadow: files\nhosts: files dns\nnetworks: files\nprotocols: files\nservices: files\nethers: files\nrpc: files\n", fnss);
+        fclose(fnss);
+    }
+
+    system("/bin/ip link set lo up 2>/dev/null || true");
+    system("/bin/ip link set eth0 up 2>/dev/null || true");
+    system("/bin/ip addr add 10.0.2.15/24 dev eth0 2>/dev/null || true");
+    system("/bin/ip route add default via 10.0.2.2 dev eth0 2>/dev/null || true");
+
     mkdir("/run/user", 0755);
     mkdir("/run/user/0", 0700);
     chown("/run/user", 0, 0);
@@ -153,7 +170,7 @@ int main(void) {
     setenv("TERM", "linux", 1);
     setenv("LANG", "C.UTF-8", 1);
     setenv("LC_ALL", "C.UTF-8", 1);
-    setenv("PS1", "\033[1;31mdepth-hinux \033[0;31m~/\033[0m ", 1);
+    setenv("PS1", "\033[1;31mdepth-hinux \033[0;31m~/\033[1;31m # \033[0m ", 1);
 
     FILE *fmid = fopen("/etc/machine-id", "w");
     if (fmid) {
@@ -168,14 +185,21 @@ int main(void) {
         fclose(fdbusmid);
     }
 
+    const char *bashrc_content = "export PS1=\"\\[\\033[1;31m\\]depth-hinux \\[\\033[0;31m\\]\\w\\[\\033[1;31m\\] # \\[\\033[0m\\] \"\nalias sudo=\"rac\"\n";
+    FILE *fbrc = fopen("/etc/bash.bashrc", "w");
+    if (fbrc) { fputs(bashrc_content, fbrc); fclose(fbrc); }
+    FILE *frtc = fopen("/root/.bashrc", "w");
+    if (frtc) { fputs(bashrc_content, frtc); fclose(frtc); }
+
     FILE *fprof = fopen("/etc/profile", "w");
     if (fprof) {
         fputs("export PATH=/bin:/sbin:/usr/bin:/usr/sbin\n", fprof);
         fputs("export HOME=/root\n", fprof);
         fputs("export LANG=C.UTF-8\n", fprof);
         fputs("export LC_ALL=C.UTF-8\n", fprof);
-        fputs("export PS1=\"\\033[1;31mdepth-hinux \\033[0;31m~/\\033[0m \"\n", fprof);
+        fputs("export PS1=\"\\[\\033[1;31m\\]depth-hinux \\[\\033[0;31m\\]\\w\\[\\033[1;31m\\] # \\[\\033[0m\\] \"\n", fprof);
         fputs("export TERM=linux\n", fprof);
+        fputs("alias sudo=\"rac\"\n", fprof);
         fclose(fprof);
     }
 

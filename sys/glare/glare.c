@@ -230,7 +230,13 @@ int main(int argc, char **argv) {
 
     usleep(200000);
 
-    if (access("/usr/lib/cinnamon-settings-daemon/csd-xsettings", X_OK) == 0) {
+    if (access("/bin/depth-xsettings", X_OK) == 0) {
+        if (fork() == 0) {
+            char *csd_args[] = {"/bin/depth-xsettings", NULL};
+            execv("/bin/depth-xsettings", csd_args);
+            exit(0);
+        }
+    } else if (access("/usr/lib/cinnamon-settings-daemon/csd-xsettings", X_OK) == 0) {
         if (fork() == 0) {
             char *csd_args[] = {"/usr/lib/cinnamon-settings-daemon/csd-xsettings", NULL};
             execv("/usr/lib/cinnamon-settings-daemon/csd-xsettings", csd_args);
@@ -238,7 +244,13 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (access("/usr/lib/cinnamon-settings-daemon/csd-background", X_OK) == 0) {
+    if (access("/bin/depth-bgd", X_OK) == 0) {
+        if (fork() == 0) {
+            char *bg_args[] = {"/bin/depth-bgd", NULL};
+            execv("/bin/depth-bgd", bg_args);
+            exit(0);
+        }
+    } else if (access("/usr/lib/cinnamon-settings-daemon/csd-background", X_OK) == 0) {
         if (fork() == 0) {
             char *bg_args[] = {"/usr/lib/cinnamon-settings-daemon/csd-background", NULL};
             execv("/usr/lib/cinnamon-settings-daemon/csd-background", bg_args);

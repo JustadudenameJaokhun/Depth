@@ -9,12 +9,6 @@
       "sha256": "960b17cfee866571592ce83c031cf1eef26f1c4b8016daa594128f325034cd87"
     },
     {
-      "name": "firefox",
-      "file": "firefox.dpk",
-      "size": 82615380,
-      "sha256": "380711c4bebb1c1f813fe3dd6807c6352e6506c565850760d1fcdcbec533cc12"
-    },
-    {
       "name": "git",
       "file": "git.dpk",
       "size": 2692432,
@@ -33,16 +27,18 @@
       "sha256": "d6115630d68180ce63f307c535085335fb7830c12f31203b84312da6a7446dd2"
     },
     {
+      "name": "firefox",
+      "file": "firefox.dpk",
+      "size": 82615380,
+      "sha256": "a6de2ceb5b1f94f3c634ef288553741630676b4534cd3ed2d194d971ad1f9939",
+      "split": true,
+      "chunks": 4
+    },
+    {
       "name": "nano",
       "file": "nano.dpk",
       "size": 216,
       "sha256": "2081574453ad05d8fbd79027b7604e7e6567794174e7bd381baeba1258cf9aa2"
-    },
-    {
-      "name": "google-chrome",
-      "file": "google-chrome.dpk",
-      "size": 235,
-      "sha256": "bc7efecd2faf4e0f5fc3b669eb29483396a5c271a583416bd96c63560436fdb4"
     },
     {
       "name": "depth-sh",

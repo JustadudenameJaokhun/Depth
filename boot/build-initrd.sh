@@ -46,6 +46,21 @@ ln -sf /bin/depth-part "$STAGING"/usr/bin/depthpart
 ln -sf /bin/depth-part "$STAGING"/usr/bin/part
 ln -sf /bin/hinux-driverd "$STAGING"/bin/hinux-driverd
 ln -sf /bin/hinux-driverd "$STAGING"/usr/bin/hinux-driverd
+ln -sf /bin/rac "$STAGING"/usr/bin/rac
+chmod 4755 "$STAGING"/bin/rac 2>/dev/null || true
+chmod 4755 "$STAGING"/usr/bin/rac 2>/dev/null || true
+ln -sf /bin/mkfs.x1 "$STAGING"/sbin/mkfs.x1
+ln -sf /bin/mkfs.x1 "$STAGING"/usr/bin/mkfs.x1
+ln -sf /bin/mkfs.x1 "$STAGING"/bin/x1-format
+ln -sf /bin/mkfs.x1 "$STAGING"/bin/x1fs
+ln -sf /bin/mount.x1 "$STAGING"/bin/x1-mount
+ln -sf /bin/mount.x1 "$STAGING"/sbin/mount.x1
+ln -sf /bin/mount.x1 "$STAGING"/usr/bin/mount.x1
+ln -sf /bin/depth-bgd "$STAGING"/usr/bin/depth-bgd
+ln -sf /bin/depth-xsettings "$STAGING"/usr/bin/depth-xsettings
+for nss in /usr/lib/libnss_files* /usr/lib/libnss_dns* /usr/lib/libresolv*; do
+    cp -af "$nss" "$STAGING"/usr/lib/ 2>/dev/null || true
+done
 cp -f /usr/bin/fastfetch "$STAGING"/bin/fastfetch
 cp -f /usr/bin/ip "$STAGING"/bin/ip 2>/dev/null || true
 cp -f /usr/bin/tar "$STAGING"/bin/tar 2>/dev/null || true
@@ -63,7 +78,11 @@ done
 cp -f /home/jaokhun/Projects/Depth/pkg/repo/repo.json "$STAGING"/etc/dive/repo.json 2>/dev/null || true
 
 printf "dimensions\n" > "$STAGING"/etc/hostname
+printf "127.0.0.1\tlocalhost dimensions\n::1\tlocalhost ip6-localhost ip6-loopback\n" > "$STAGING"/etc/hosts
+printf "passwd: files\ngroup: files\nshadow: files\nhosts: files dns\nnetworks: files\nprotocols: files\nservices: files\nethers: files\nrpc: files\n" > "$STAGING"/etc/nsswitch.conf
 printf "nameserver 10.0.2.3\nnameserver 1.1.1.1\nnameserver 8.8.8.8\n" > "$STAGING"/etc/resolv.conf
+printf "export PS1=\"\\[\\033[1;31m\\]depth-hinux \\[\\033[0;31m\\]\\w\\[\\033[1;31m\\] # \\[\\033[0m\\] \"\nalias sudo=\"rac\"\n" > "$STAGING"/etc/bash.bashrc
+printf "export PS1=\"\\[\\033[1;31m\\]depth-hinux \\[\\033[0;31m\\]\\w\\[\\033[1;31m\\] # \\[\\033[0m\\] \"\nalias sudo=\"rac\"\n" > "$STAGING"/root/.bashrc
 printf "root:x:0:0:root:/root:/bin/sh\ndbus:x:81:81:System Message Bus:/:/usr/bin/nologin\npolkitd:x:102:102:PolicyKit Daemon:/:/usr/bin/nologin\navahi:x:84:84:Avahi:/:/usr/bin/nologin\ncolord:x:124:124:Colord:/:/usr/bin/nologin\nsystemd-network:x:192:192:systemd:/:/usr/bin/nologin\nsystemd-oom:x:999:999:systemd:/:/usr/bin/nologin\nsystemd-resolve:x:193:193:systemd:/:/usr/bin/nologin\nsystemd-timesync:x:194:194:systemd:/:/usr/bin/nologin\n" > "$STAGING"/etc/passwd
 printf "root:x:0:\ndbus:x:81:\npolkitd:x:102:\navahi:x:84:\ncolord:x:124:\nnetwork:x:90:\n" > "$STAGING"/etc/group
 printf "root:\$6\$W/s2mWJtU2KDanVG\$AxeYjt/g9d/qubvOm3eYCQikRlC2zaNLCF6RGeFiXkqiNGZhD8.H6FuUVox8V9aIbaBW9vUdUtVcfUfN8bi4/0:19800:0:99999:7:::\n" > "$STAGING"/etc/shadow
@@ -105,12 +124,13 @@ EOF
 Default=default
 Locked=1
 EOF
-    printf 'user_pref("toolkit.telemetry.enabled", false);\nuser_pref("browser.shell.checkDefaultBrowser", false);\nuser_pref("browser.startup.homepage", "https://depth-hinux.org");\n' > "$STAGING"/root/.mozilla/firefox/default/user.js
+    printf 'user_pref("toolkit.telemetry.enabled", false);\nuser_pref("browser.shell.checkDefaultBrowser", false);\nuser_pref("browser.startup.homepage", "https://depth-hinux.org");\nuser_pref("browser.offline", false);\nuser_pref("network.dns.disableIPv6", true);\nuser_pref("network.trr.mode", 5);\n' > "$STAGING"/root/.mozilla/firefox/default/user.js
     if [ -f "$STAGING"/usr/lib/firefox/firefox ]; then
         mv "$STAGING"/usr/lib/firefox/firefox "$STAGING"/usr/lib/firefox/firefox.real
         cat << 'EOF' > "$STAGING"/usr/lib/firefox/firefox
 #!/bin/sh
 mkdir -p /root/.mozilla/firefox/default
+ip link set lo up 2>/dev/null || true
 chown -R 0:0 /root 2>/dev/null || true
 rm -f /root/.mozilla/firefox/*/.parentlock /root/.mozilla/firefox/*/lock 2>/dev/null || true
 ARGS=""
@@ -415,6 +435,11 @@ PYEOF
     ln -sf /bin/hinux-driverd "$STAGING"/usr/bin/hinux-driverd
     ln -sf /bin/depth-part "$STAGING"/usr/bin/depthpart
     ln -sf /bin/depth-part "$STAGING"/usr/bin/part
+    ln -sf /bin/rac "$STAGING"/usr/bin/rac
+    ln -sf /bin/mkfs.x1 "$STAGING"/usr/bin/mkfs.x1
+    ln -sf /bin/mkfs.x1 "$STAGING"/bin/x1-format
+    ln -sf /bin/depth-bgd "$STAGING"/usr/bin/depth-bgd
+    ln -sf /bin/depth-xsettings "$STAGING"/usr/bin/depth-xsettings
     cat << 'EOF' > "$STAGING"/etc/X11/xorg.conf
 Section "Device"
     Identifier "Card0"

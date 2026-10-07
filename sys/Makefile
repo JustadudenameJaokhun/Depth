@@ -19,7 +19,11 @@ COREUTILS = $(BIN_DIR)/echo $(BIN_DIR)/cat $(BIN_DIR)/ls $(BIN_DIR)/cp \
             $(BIN_DIR)/cinnamon-watchdog $(BIN_DIR)/glare-launcher \
             $(BIN_DIR)/cinnamon-autostart $(BIN_DIR)/dpk-verify \
             $(BIN_DIR)/depth-part $(BIN_DIR)/depthpart $(BIN_DIR)/part \
-            $(BIN_DIR)/hinux-driverd
+            $(BIN_DIR)/hinux-driverd $(BIN_DIR)/rac \
+            $(BIN_DIR)/mkfs.x1 $(BIN_DIR)/x1-format $(BIN_DIR)/x1fs \
+            $(BIN_DIR)/mount.x1 $(BIN_DIR)/x1-mount \
+            $(BIN_DIR)/depth-bgd $(BIN_DIR)/depth-xsettings \
+            $(BIN_DIR)/depth-boot.bin
 
 ASM_OBJS = $(BUILD_DIR)/string.o $(BUILD_DIR)/mem.o $(BUILD_DIR)/io.o \
            $(BUILD_DIR)/avx2_mem.o $(BUILD_DIR)/string_simd.o $(BUILD_DIR)/hinux.o \
@@ -60,6 +64,25 @@ $(BIN_DIR)/depthpart: $(BIN_DIR)/depth-part
 
 $(BIN_DIR)/part: $(BIN_DIR)/depth-part
 	cp -f $< $@
+
+$(BIN_DIR)/mkfs.x1: $(BUILD_DIR)/x1-format.o
+	$(LD) $(LDFLAGS) $< -o $@
+
+$(BIN_DIR)/x1-format: $(BIN_DIR)/mkfs.x1
+	cp -f $< $@
+
+$(BIN_DIR)/x1fs: $(BIN_DIR)/mkfs.x1
+	cp -f $< $@
+
+$(BIN_DIR)/mount.x1: $(BUILD_DIR)/x1-mount.o
+	$(LD) $(LDFLAGS) $< -o $@
+
+$(BIN_DIR)/x1-mount: $(BIN_DIR)/mount.x1
+	cp -f $< $@
+
+$(BIN_DIR)/depth-boot.bin: bootloader/depth-boot.asm
+	nasm -f bin $< -o $@
+	cp -f $@ ../boot/depth-boot.bin
 
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)

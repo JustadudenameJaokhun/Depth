@@ -29,3 +29,29 @@ genisoimage -rational-rock -volid "DEPTH_HINUX" \
   -o /home/jaokhun/Projects/Depth/boot/depth-hinux.iso "$ISO_STAGING"
 
 rm -rf "$ISO_STAGING"
+
+python3 - << 'PYEOF'
+import os, struct
+
+iso_path = "/home/jaokhun/Projects/Depth/boot/depth-hinux.iso"
+mbr_path = "/home/jaokhun/Projects/Depth/boot/depth-boot.bin"
+
+if os.path.exists(iso_path) and os.path.exists(mbr_path):
+    size = os.path.getsize(iso_path)
+    total_sectors = size // 512
+    with open(mbr_path, "rb") as f:
+        mbr = bytearray(f.read()[:512])
+    if len(mbr) < 512:
+        mbr.extend(b"\x00" * (512 - len(mbr)))
+    mbr[446] = 0x80
+    mbr[447:450] = b"\x00\x01\x00"
+    mbr[450] = 0x17
+    mbr[451:454] = b"\xff\xff\xff"
+    struct.pack_into("<I", mbr, 454, 0)
+    struct.pack_into("<I", mbr, 458, total_sectors)
+    mbr[510] = 0x55
+    mbr[511] = 0xAA
+    with open(iso_path, "r+b") as f:
+        f.seek(0)
+        f.write(mbr)
+PYEOF

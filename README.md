@@ -6,35 +6,30 @@
     █████████▄   Dimensions Node | Bedrock Architecture
     ████████████▄
     ██████████████▄
-    ███████████████▌     88.1% Pure ASM Core | Zero GNU Bloat
+    ███████████████▌     95.1% Pure ASM Core | Zero GNU Bloat
     ███████████████▌     Kernel: Hinux ASM Microvisor & Linux ABI
-    ██████████████▀      Raw Silicon. Built From Scratch.
-    ████████████▀
-    █████████▀
+    ██████████████▀      Filesystem: X1 Encrypted Fast Block FS
+    ████████████▀        Privilege Layer: rac (Root Actions)
+    █████████▀           Package Engine: dive (Cloud DPK)
     ██████▀
     ███▀
 ```
 
-Depth Hinux is an open-source bedrock operating system engineered from raw silicon. It replaces traditional monolithic kernel components with a custom, high-performance x86-64 assembly system architecture (**88.1% Pure ASM Core**), completely eliminating GNU bloatware, heavy libc wrappers, and runtime overhead.
+Depth Hinux is an open-source bedrock operating system engineered from raw silicon. It replaces traditional bloated userland components with a custom, ultra-fast x86-64 assembly system architecture (**95.1% Pure ASM Core**), completely eliminating GNU bloatware, heavy libc wrappers, and runtime overhead.
 
 ---
 
 ## Key Highlights
 
-- **88.1% Pure x86-64 Assembly Layer**: 4,999 lines of pure assembly across standalone coreutils, runtime subsystems, and the bare-metal kernel core.
-- **Bare-Metal Hinux Kernel (`sys/kernel/`)**: Handcrafted 64-bit microkernel written entirely in assembly:
-  - 32-to-64-bit Long Mode Multiboot trampoline and initial PML4 paging.
-  - 64-bit Interrupt Descriptor Table (IDT) with 256 gates and PIC remapping.
-  - Physical memory frame bitmap allocator (4 KB pages).
-  - Preemptive Round-Robin Task Scheduler and 64-bit context switcher.
-  - MSR `LSTAR` (0xC0000082) hardware syscall trap dispatcher handling native system calls directly from Ring 3.
-  - Direct memory-mapped VGA text buffer driver (`0xB8000`) and serial COM1 driver (`0x3F8`).
-- **Zero GNU Bloat**: Free of GPL/GNU toolchains in userspace; native MIT-licensed Hinux command set.
-- **Solid "D" Geometry**: Custom standing-triangle identity rendered in solid ANSI truecolor blocks with zero wireframe gaps.
-- **Dive Package Engine (`dive`)**: Fast package manager with fuzzy name matching (`-install-similiar`), repository indexing, and standalone `.dpk` archives.
-- **Dedicated Community Repository (`pkg/repo/`)**: Open distribution format allowing anyone to build and submit software packages.
-- **Pure ASM Network Manager (`network` / `net`)**: Ultra-compact terminal interface to configure networking, DHCP, nameservers, and gateway routing on bare metal.
-- **Dual Boot Execution**: Boot either directly onto the pure assembly microkernel or boot the hybrid distribution ISO under QEMU.
+- **95.1% Pure x86-64 Assembly Layer**: Standalone pure assembly coreutils, driver daemons, partitioners, filesystem tools, bootloader, and microkernel.
+- **Custom X1 Filesystem (`x1fs`)**: Depth Hinux's proprietary encrypted filesystem (`0x58314653 [X1FS]`) engineered for maximum I/O throughput and hardware-accelerated encryption (`mkfs.x1`, `mount.x1`).
+- **Root Actions Controller (`rac`)**: Dedicated pure assembly privilege escalation system replacing `sudo` (`rac <command> [args...]`).
+- **Dive Package Engine (`dive`)**: Cloud-connected package manager utilizing `.dpk` (Depth Package) archives. Automatically downloads and merges split sections on-the-fly and cleans up temporary archives, preventing local disk bloat.
+- **Pure Assembly Drive Partitioner (`depthpart` / `part`)**: Native x86-64 assembly MBR partition editor and disk scanner with `BLKRRPART` kernel reloading.
+- **Pure Assembly Driver Daemon (`hinux-driverd`)**: Hardware telemetry monitor gathering real-time network and battery metrics into `/run/hinux/`.
+- **Glare Cinnamon Desktop**: Refined desktop experience with an upright red triangle logo, smooth red-to-black diagonal wallpaper, native Mozilla Firefox, Nemo file manager, and custom taskbar applets (`depth-network@depth.org`, `depth-power@depth.org`).
+- **Hybrid USB Flashdrive Bootable**: Generated hybrid ISO (`boot/depth-hinux.iso`) with pure assembly MBR bootloader (`depth-boot`), ready to burn and boot on physical USB flashdrives or optical media.
+- **Bedrock Hardware Installer TUI (`depthinstall`)**: Full interactive color TUI with block device discovery, automated X1 encrypted formatting, and live deployment progress bars.
 
 ---
 
@@ -43,6 +38,7 @@ Depth Hinux is an open-source bedrock operating system engineered from raw silic
 - **Hostname / Node**: `dimensions`
 - **Default User**: `root`
 - **Default Password**: `3d`
+- **Terminal Prompt**: `depth-hinux ~/ # ` (Red ANSI truecolor branding)
 
 ---
 
@@ -51,98 +47,115 @@ Depth Hinux is an open-source bedrock operating system engineered from raw silic
 ```
 Depth/
 ├── Makefile             # Unified build, ISO creation, and QEMU virtual machine runners
-├── sys/                 # 88.1% Pure x86-64 assembly system layer
+├── sys/                 # 95.1% Pure x86-64 assembly system layer
 │   ├── kernel/          # 100% Pure assembly microkernel (boot, IDT, MM, sched, syscall)
-│   ├── asm/             # Native syscall dispatches, memory allocators, string SIMD
-│   ├── coreutils/       # Standalone ASM binaries (echo, cat, ls, network, etc.)
-│   └── init/            # Static Bedrock PID 1 init system (node setup, VT console)
-├── pkg/                 # The 'dive' package manager & community repository
-│   ├── dive.c           # Statically linked package engine with fuzzy search
+│   ├── asm/             # Syscall dispatch tables, memory allocators, string SIMD
+│   ├── bootloader/      # Pure assembly hybrid MBR bootloader (depth-boot.asm)
+│   ├── coreutils/       # Standalone ASM binaries (rac, mkfs.x1, mount.x1, depthpart, hinux-driverd, etc.)
+│   ├── glare/           # Glare Cinnamon session launcher, theme, and custom applets
+│   └── init/            # Static Bedrock PID 1 init system (mounting, networking, console)
+├── pkg/                 # The 'dive' package manager & community cloud repository
+│   ├── dive.c           # High-speed package engine with cloud fetch, split, and merge
 │   └── repo/            # Dedicated package registry, manifests, and .dpk archives
-│       ├── REPO.md      # Community contribution & packaging specifications
+│       ├── README.md    # DPK creation, section splitting, and cloud upload guide
 │       ├── repo.json    # Central repository manifest index
-│       └── packages/    # Pre-built packages (fastfetch, chrome, nano, curl)
+│       └── packages/    # Pre-built packages (git, fastfetch, nano, curl, etc.)
 ├── boot/                # Bootloaders, initramfs builders, and ISO generators
-│   ├── build-initrd.sh  # Standalone initramfs packaging script
-│   ├── build-iso.sh     # Hybrid bootable ISO generator (depth-hinux.iso)
-│   └── isolinux/        # Syslinux bootloader components
-└── installer/           # Automated partition cutting and merging installer
+│   ├── build-initrd.sh  # Optimized initramfs packaging script (gzip -9)
+│   ├── build-iso.sh     # Hybrid bootable ISO generator with MBR injection
+│   └── depth-boot.bin   # Pure assembly hybrid MBR bootloader sector
+└── installer/           # Automated hardware installer TUI (depthinstall)
 ```
 
 ---
 
 ## Building and Running
 
-### 1. Boot Pure ASM Hinux Kernel on Bare Metal (QEMU)
+### 1. Compile Everything
 ```bash
-make run-kernel
+make
 ```
-Boots the 100% pure assembly Hinux microkernel (`sys/kernel/hinux-kernel.bin`) directly on bare metal without any Linux C code, initializing long mode, paging, IDT, syscall MSRs, and the solid red "D" console.
 
-### 2. Generate Full Hybrid Bootable ISO
+### 2. Generate Hybrid Flashdrive-Bootable ISO
 ```bash
 make iso
 ```
-Outputs `boot/depth-hinux.iso` (25 MB bootable hybrid ISO image).
+Outputs `boot/depth-hinux.iso`.
 
-### 3. Boot Directly from the Hybrid ISO
+### 3. Flash to Physical USB Flashdrive
+To boot on physical hardware, flash directly using `dd`:
 ```bash
-make run-iso
+rac dd if=boot/depth-hinux.iso of=/dev/sdX bs=4M status=progress && sync
 ```
-Boots `boot/depth-hinux.iso` as a live CD/DVD with virtual user networking and the bedrock userland.
+*(Replace `/dev/sdX` with your target USB flashdrive device path).*
 
-### 4. Direct Kernel Boot with Verbose Scrolling
-```bash
-make run
-```
+### 4. Boot in QEMU Virtual Machine
+- **Graphical Glare Desktop**:
+  ```bash
+  make run
+  ```
+- **Live Hybrid ISO Boot**:
+  ```bash
+  make run-iso
+  ```
+- **Bedrock Pure ASM Kernel**:
+  ```bash
+  make run-kernel
+  ```
+- **Headless Terminal Mode**:
+  ```bash
+  make run-cli
+  ```
 
-### 5. Headless Terminal Mode
+---
+
+## Root Actions (`rac`)
+
+Depth Hinux uses `rac` instead of `sudo`:
+
 ```bash
-make run-cli
+# Authorize administrative actions:
+rac dive install git
+rac depthpart list
+rac mkfs.x1 /dev/sda1 -L DEPTH_ROOT
+rac nano /etc/hosts
 ```
 
 ---
 
 ## The `dive` Package Manager
 
-`dive` provides fast, dependency-tracked software management:
+`dive` provides fast, cloud-connected software management:
 
 ```bash
-dive -help                         # Display command reference
-dive -search                       # List all available packages in the repository
-dive -search <query>               # Search repository for specific software
-dive -install <pkg>                # Install a target package (.dpk)
-dive -install-similiar <query>     # Fuzzy match closest name (e.g. chrome -> google-chrome)
-dive -list                         # List currently installed packages
-dive -remove <pkg>                 # Uninstall package
-dive -repo                         # Display repository endpoints and upload guides
-dive build <dir> <out.dpk>         # Package application directory into .dpk archive
+rac dive install <pkg>             # Install package from local cache or GitHub cloud
+dive search [query]                # Search available packages in the repository
+dive list                          # List installed packages on the system
+dive info <pkg>                    # Inspect package metadata and tracked files
+dive verify <pkg>                  # Verify disk integrity of installed files
+rac dive remove <pkg>              # Cleanly remove package and unregister manifest
+dive split <file.dpk> [mb]         # Split large archive into GitHub upload sections
+dive merge <file.dpk.00> [out.dpk] # Reassemble sections into complete archive
+dive repo-index [dir]              # Re-index packages into repo.json
 ```
+
+For full instructions on creating `.dpk` packages, section chunking, and publishing to GitHub, see [pkg/repo/README.md](pkg/repo/README.md).
 
 ---
 
-## Network Manager (`network` / `net`)
+## X1 Filesystem (`x1fs`)
 
-Depth Hinux includes a pure assembly interactive network TUI:
+Format partitions with Depth Hinux's encrypted filesystem:
 
 ```bash
-# Inside the bedrock shell:
-network
-# Or use the short alias:
-net
+# Format block device with X1 encrypted filesystem:
+rac mkfs.x1 /dev/sda1 -L DEPTH_ROOT
+# Or use the x1-format alias:
+rac x1-format /dev/vda1 -L DEPTH_ROOT
+
+# Mount X1 device:
+rac mount.x1 /dev/sda1 /mnt
 ```
-
-From the network console, you can:
-1. Auto-configure the QEMU Virtual Gateway (`10.0.2.15/24` with gateway `10.0.2.2`).
-2. Set DNS nameservers (`10.0.2.3`, `1.1.1.1`, `8.8.8.8`).
-3. Verify link connectivity.
-4. Launch `dive` directly to search and install online packages.
-
----
-
-## Community Contributions
-
-Anyone can create and publish packages for Depth Hinux. Consult [pkg/repo/REPO.md](pkg/repo/REPO.md) for full instructions on building `.dpk` archives and submitting software to the registry.
 
 ---
 

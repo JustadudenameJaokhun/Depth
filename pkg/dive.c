@@ -87,6 +87,8 @@ static void cmd_help(void) {
     printf("%sUsage:%s dive <command> [arguments]\n\n", COLOR_BOLD, COLOR_RESET);
     printf("  %srepo-index%s [dir]             Generate repo.json index for any repository folder\n", COLOR_RED, COLOR_RESET);
     printf("  %sbuild%s <dir> [out.dpk]        Compile directory layout into verified .dpk archive\n", COLOR_RED, COLOR_RESET);
+    printf("  %ssplit%s <file.dpk> [chunk_mb]  Split package into sections for GitHub upload (default 20MB)\n", COLOR_RED, COLOR_RESET);
+    printf("  %smerge%s <file.dpk.00> [out]    Assemble split package sections into single archive\n", COLOR_RED, COLOR_RESET);
     printf("  %sinstall%s <package|file.dpk>   Install package archive with full file manifest\n", COLOR_RED, COLOR_RESET);
     printf("  %sremove%s <package>             Unlink and remove all files belonging to package\n", COLOR_RED, COLOR_RESET);
     printf("  %slist%s                         Display all installed packages and manifests\n", COLOR_RED, COLOR_RESET);
@@ -104,15 +106,18 @@ static void cmd_repo(void) {
     printf("%s-------------------------------------------------------%s\n", COLOR_DIM, COLOR_RESET);
     printf("  Default Local Repo: %s/var/cache/dive/packages%s\n", COLOR_RED, COLOR_RESET);
     printf("  Source Repo Path:   %spkg/repo/packages%s\n", COLOR_RED, COLOR_RESET);
+    printf("  Cloud Repository:   %shttps://raw.githubusercontent.com/JustadudenameJaokhun/Depth/main/pkg/repo/packages%s\n", COLOR_RED, COLOR_RESET);
     printf("  Database Directory: %s/var/lib/dive%s\n", COLOR_RED, COLOR_RESET);
     printf("  Installed Manifests:%s/var/lib/dive/installed%s\n", COLOR_RED, COLOR_RESET);
-    printf("\n%sHow to add and index your own packages:%s\n", COLOR_BOLD, COLOR_RESET);
+    printf("\n%sHow to add and index your own packages for GitHub:%s\n", COLOR_BOLD, COLOR_RESET);
     printf("  1. Prepare your rootfs files in a folder (e.g. myapp/usr/bin/myapp)\n");
     printf("  2. Create a dpk.meta file inside the folder with metadata\n");
     printf("  3. Run: %sdive build myapp myapp.dpk%s\n", COLOR_BOLD, COLOR_RESET);
-    printf("  4. Place %smyapp.dpk%s into %spkg/repo/packages/%s\n", COLOR_BOLD, COLOR_RESET, COLOR_RED, COLOR_RESET);
-    printf("  5. Run: %sdive repo-index pkg/repo/packages%s\n", COLOR_BOLD, COLOR_RESET);
-    printf("  6. The repository index repo.json is generated and ready for installation!\n\n");
+    printf("  4. If larger than 25MB, split it: %sdive split myapp.dpk 20%s\n", COLOR_BOLD, COLOR_RESET);
+    printf("  5. Place %smyapp.dpk%s (or sections .00, .01) into %spkg/repo/packages/%s\n", COLOR_BOLD, COLOR_RESET, COLOR_RED, COLOR_RESET);
+    printf("  6. Run: %sdive repo-index pkg/repo/packages%s\n", COLOR_BOLD, COLOR_RESET);
+    printf("  7. Commit and push: %sgit add pkg/repo/packages && git commit -m 'Add myapp' && git push%s\n", COLOR_BOLD, COLOR_RESET);
+    printf("  8. Users can install on-demand without tanking storage: %srac dive install myapp%s\n\n", COLOR_BOLD, COLOR_RESET);
 }
 
 static int get_file_sha256(const char *filepath, char *out_hash, size_t max_len) {
@@ -172,8 +177,47 @@ static int cmd_repo_index(const char *target_dir) {
     int count = 0;
     while ((ent = readdir(d)) != NULL) {
         if (ent->d_name[0] == '.') continue;
+        char *split_dot = strstr(ent->d_name, ".dpk.00");
         char *dot = strstr(ent->d_name, ".dpk");
-        if (dot && strcmp(dot, ".dpk") == 0) {
+        if (split_dot && strcmp(split_dot, ".dpk.00") == 0) {
+            char pkg_name[128];
+            size_t nlen = split_dot - ent->d_name;
+            if (nlen >= sizeof(pkg_name)) nlen = sizeof(pkg_name) - 1;
+            strncpy(pkg_name, ent->d_name, nlen);
+            pkg_name[nlen] = '\0';
+
+            char base_file[128];
+            snprintf(base_file, sizeof(base_file), "%s.dpk", pkg_name);
+
+            unsigned long total_sz = 0;
+            int num_chunks = 0;
+            while (1) {
+                char chk_path[512];
+                snprintf(chk_path, sizeof(chk_path), "%s/%s.dpk.%02d", repo_path, pkg_name, num_chunks);
+                struct stat cst;
+                if (stat(chk_path, &cst) != 0) break;
+                total_sz += (unsigned long)cst.st_size;
+                num_chunks++;
+            }
+
+            char first_path[512];
+            snprintf(first_path, sizeof(first_path), "%s/%s", repo_path, ent->d_name);
+            char sha[128] = "unknown";
+            get_file_sha256(first_path, sha, sizeof(sha));
+
+            if (count > 0) fprintf(fj, ",\n");
+            fprintf(fj, "    {\n");
+            fprintf(fj, "      \"name\": \"%s\",\n", pkg_name);
+            fprintf(fj, "      \"file\": \"%s\",\n", base_file);
+            fprintf(fj, "      \"size\": %lu,\n", total_sz);
+            fprintf(fj, "      \"sha256\": \"%s\",\n", sha);
+            fprintf(fj, "      \"split\": true,\n");
+            fprintf(fj, "      \"chunks\": %d\n", num_chunks);
+            fprintf(fj, "    }");
+
+            printf("  + Indexed split package: %s%-18s%s [%lu bytes across %d sections]\n", COLOR_BOLD, pkg_name, COLOR_RESET, total_sz, num_chunks);
+            count++;
+        } else if (dot && strcmp(dot, ".dpk") == 0) {
             char pkg_name[128];
             size_t nlen = dot - ent->d_name;
             if (nlen >= sizeof(pkg_name)) nlen = sizeof(pkg_name) - 1;
@@ -262,6 +306,112 @@ static int cmd_build(const char *src_dir, const char *out_dpk) {
     get_file_sha256(target_archive, sha, sizeof(sha));
 
     printf("%s[DIVE]%s Built %s successfully [%lu bytes, sha256: %s]\n", COLOR_RED, COLOR_RESET, target_archive, sz, sha);
+    return 0;
+}
+
+static int cmd_split(const char *dpk_path, int chunk_size_mb) {
+    if (!dpk_path) {
+        fprintf(stderr, "%s[ERROR]%s Usage: dive split <package.dpk> [chunk_size_mb]\n", COLOR_RED, COLOR_RESET);
+        return 1;
+    }
+    if (access(dpk_path, R_OK) != 0) {
+        fprintf(stderr, "%s[ERROR]%s Cannot read file: %s\n", COLOR_RED, COLOR_RESET, dpk_path);
+        return 1;
+    }
+    if (chunk_size_mb <= 0) chunk_size_mb = 20;
+    size_t chunk_bytes = (size_t)chunk_size_mb * 1024 * 1024;
+
+    FILE *fin = fopen(dpk_path, "rb");
+    if (!fin) {
+        fprintf(stderr, "%s[ERROR]%s Failed to open %s\n", COLOR_RED, COLOR_RESET, dpk_path);
+        return 1;
+    }
+
+    char *buf = malloc(chunk_bytes);
+    if (!buf) {
+        fclose(fin);
+        return 1;
+    }
+
+    int part = 0;
+    size_t read_bytes = 0;
+    printf("%s[DIVE]%s Splitting '%s' into %d MB sections for GitHub cloud...\n", COLOR_RED, COLOR_RESET, dpk_path, chunk_size_mb);
+
+    while ((read_bytes = fread(buf, 1, chunk_bytes, fin)) > 0) {
+        char part_name[512];
+        snprintf(part_name, sizeof(part_name), "%s.%02d", dpk_path, part);
+        FILE *fout = fopen(part_name, "wb");
+        if (!fout) break;
+        fwrite(buf, 1, read_bytes, fout);
+        fclose(fout);
+
+        char sha[128] = "unknown";
+        get_file_sha256(part_name, sha, sizeof(sha));
+        printf("  -> Section %02d: %s [%lu bytes, sha: %.12s...]\n", part, part_name, (unsigned long)read_bytes, sha);
+        part++;
+    }
+
+    free(buf);
+    fclose(fin);
+    printf("%s[DIVE]%s Splitting complete: generated %d sections for %s\n\n", COLOR_RED, COLOR_RESET, part, dpk_path);
+    return 0;
+}
+
+static int cmd_merge(const char *first_part, const char *out_path) {
+    if (!first_part) {
+        fprintf(stderr, "%s[ERROR]%s Usage: dive merge <first_part.dpk.00> [out.dpk]\n", COLOR_RED, COLOR_RESET);
+        return 1;
+    }
+
+    char base_prefix[512];
+    strncpy(base_prefix, first_part, sizeof(base_prefix));
+    char *dot = strstr(base_prefix, ".dpk.");
+    if (dot) {
+        *(dot + 4) = '\0';
+    }
+
+    char final_out[512];
+    if (out_path && strlen(out_path) > 0) {
+        strncpy(final_out, out_path, sizeof(final_out));
+    } else {
+        strncpy(final_out, base_prefix, sizeof(final_out));
+    }
+
+    FILE *fout = fopen(final_out, "wb");
+    if (!fout) {
+        fprintf(stderr, "%s[ERROR]%s Cannot create output file %s\n", COLOR_RED, COLOR_RESET, final_out);
+        return 1;
+    }
+
+    printf("%s[DIVE]%s Merging sections into '%s'...\n", COLOR_RED, COLOR_RESET, final_out);
+
+    char *buf = malloc(64 * 1024);
+    if (!buf) { fclose(fout); return 1; }
+
+    int part = 0;
+    unsigned long total_bytes = 0;
+    while (1) {
+        char part_name[512];
+        snprintf(part_name, sizeof(part_name), "%s.%02d", base_prefix, part);
+        FILE *fin = fopen(part_name, "rb");
+        if (!fin) break;
+
+        size_t n;
+        while ((n = fread(buf, 1, 64 * 1024, fin)) > 0) {
+            fwrite(buf, 1, n, fout);
+            total_bytes += n;
+        }
+        fclose(fin);
+        printf("  + Merged section %02d: %s\n", part, part_name);
+        part++;
+    }
+
+    free(buf);
+    fclose(fout);
+
+    char sha[128] = "unknown";
+    get_file_sha256(final_out, sha, sizeof(sha));
+    printf("%s[DIVE]%s Assembled %s from %d sections [%lu bytes, sha: %s]\n\n", COLOR_RED, COLOR_RESET, final_out, part, total_bytes, sha);
     return 0;
 }
 
@@ -461,7 +611,8 @@ static int cmd_install(const char *pkg_target) {
     snprintf(inst_dir, sizeof(inst_dir), "%s/installed", db);
     ensure_dir(inst_dir);
 
-    char pkg_path[512];
+    char pkg_path[512] = "";
+    int is_temp_download = 0;
     if (access(pkg_target, R_OK) == 0) {
         strncpy(pkg_path, pkg_target, sizeof(pkg_path));
     } else {
@@ -471,11 +622,65 @@ static int cmd_install(const char *pkg_target) {
             if (access(pkg_path, R_OK) != 0) {
                 snprintf(pkg_path, sizeof(pkg_path), "/etc/dive/packages/%s.dpk", pkg_target);
                 if (access(pkg_path, R_OK) != 0) {
-                    fprintf(stderr, "%s[ERROR]%s Cannot locate package archive for '%s'\n", COLOR_RED, COLOR_RESET, pkg_target);
-                    return 1;
+                    char split_test[512];
+                    snprintf(split_test, sizeof(split_test), "pkg/repo/packages/%s.dpk.00", pkg_target);
+                    if (access(split_test, R_OK) != 0) {
+                        snprintf(split_test, sizeof(split_test), "/var/cache/dive/packages/%s.dpk.00", pkg_target);
+                    }
+                    if (access(split_test, R_OK) == 0) {
+                        char tmp_target[512];
+                        snprintf(tmp_target, sizeof(tmp_target), "/tmp/%s.dpk", pkg_target);
+                        if (cmd_merge(split_test, tmp_target) == 0) {
+                            strncpy(pkg_path, tmp_target, sizeof(pkg_path));
+                            is_temp_download = 1;
+                        }
+                    } else {
+                        printf("%s[DIVE]%s Package not found locally. Connecting to GitHub cloud repository...\n", COLOR_RED, COLOR_RESET);
+                        char tmp_target[512];
+                        snprintf(tmp_target, sizeof(tmp_target), "/tmp/%s.dpk", pkg_target);
+                        char cloud_url[512];
+                        snprintf(cloud_url, sizeof(cloud_url), "https://raw.githubusercontent.com/JustadudenameJaokhun/Depth/main/pkg/repo/packages/%s.dpk", pkg_target);
+                        char dl_cmd[1024];
+                        snprintf(dl_cmd, sizeof(dl_cmd), "curl -f -L -s -o \"%s\" \"%s\"", tmp_target, cloud_url);
+                        if (system(dl_cmd) == 0 && access(tmp_target, R_OK) == 0) {
+                            strncpy(pkg_path, tmp_target, sizeof(pkg_path));
+                            is_temp_download = 1;
+                        } else {
+                            int part = 0;
+                            int has_chunks = 0;
+                            while (part < 50) {
+                                char chunk_dest[512];
+                                snprintf(chunk_dest, sizeof(chunk_dest), "/tmp/%s.dpk.%02d", pkg_target, part);
+                                char chunk_url[512];
+                                snprintf(chunk_url, sizeof(chunk_url), "https://raw.githubusercontent.com/JustadudenameJaokhun/Depth/main/pkg/repo/packages/%s.dpk.%02d", pkg_target, part);
+                                snprintf(dl_cmd, sizeof(dl_cmd), "curl -f -L -s -o \"%s\" \"%s\"", chunk_dest, chunk_url);
+                                if (system(dl_cmd) != 0 || access(chunk_dest, R_OK) != 0) break;
+                                printf("  + Retrieved cloud section %02d [%s]\n", part, chunk_dest);
+                                has_chunks = 1;
+                                part++;
+                            }
+                            if (has_chunks) {
+                                char first_part[512];
+                                snprintf(first_part, sizeof(first_part), "/tmp/%s.dpk.00", pkg_target);
+                                if (cmd_merge(first_part, tmp_target) == 0) {
+                                    strncpy(pkg_path, tmp_target, sizeof(pkg_path));
+                                    is_temp_download = 1;
+                                }
+                                for (int p = 0; p < part; p++) {
+                                    char rem_c[512];
+                                    snprintf(rem_c, sizeof(rem_c), "/tmp/%s.dpk.%02d", pkg_target, p);
+                                    unlink(rem_c);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+    if (strlen(pkg_path) == 0 || access(pkg_path, R_OK) != 0) {
+        fprintf(stderr, "%s[ERROR]%s Cannot locate package archive for '%s' locally or in cloud\n", COLOR_RED, COLOR_RESET, pkg_target);
+        return 1;
     }
 
     const char *env_root = getenv("DEPTH_ROOT");
@@ -595,6 +800,11 @@ static int cmd_install(const char *pkg_target) {
 
     if (access("/usr/bin/update-desktop-database", X_OK) == 0) {
         system("/usr/bin/update-desktop-database 2>/dev/null || true");
+    }
+
+    if (is_temp_download && strlen(pkg_path) > 0) {
+        unlink(pkg_path);
+        printf("%s[DIVE]%s Cloud installation finished: temporary files cleared (0 local disk storage used).\n", COLOR_RED, COLOR_RESET);
     }
 
     printf("%s[DIVE]%s %s%s%s installed successfully (%d files tracked in manifest).\n", COLOR_RED, COLOR_RESET, COLOR_BOLD, base_name, COLOR_RESET, file_count);
@@ -773,6 +983,21 @@ int main(int argc, char **argv) {
             return 1;
         }
         return cmd_build(argv[2], (argc >= 4) ? argv[3] : NULL);
+    }
+    if (strcmp(action, "split") == 0 || strcmp(action, "-split") == 0) {
+        if (argc < 3) {
+            fprintf(stderr, "%s[ERROR]%s Usage: dive split <package.dpk> [chunk_size_mb]\n", COLOR_RED, COLOR_RESET);
+            return 1;
+        }
+        int chunk_mb = (argc >= 4) ? atoi(argv[3]) : 20;
+        return cmd_split(argv[2], chunk_mb);
+    }
+    if (strcmp(action, "merge") == 0 || strcmp(action, "-merge") == 0) {
+        if (argc < 3) {
+            fprintf(stderr, "%s[ERROR]%s Usage: dive merge <first_part.dpk.00> [out.dpk]\n", COLOR_RED, COLOR_RESET);
+            return 1;
+        }
+        return cmd_merge(argv[2], (argc >= 4) ? argv[3] : NULL);
     }
     if (strcmp(action, "sync") == 0 || strcmp(action, "-sync") == 0 || strcmp(action, "update") == 0 || strcmp(action, "-update") == 0) {
         return cmd_sync();
