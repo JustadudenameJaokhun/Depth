@@ -6,29 +6,32 @@
     █████████▄   Dimensions Node | Bedrock Architecture
     ████████████▄
     ██████████████▄
-    ███████████████▌     95.1% Pure ASM Core | Zero GNU Bloat
+    ███████████████▌     Pure ASM Core | Zero GNU Bloat
     ███████████████▌     Kernel: Hinux ASM Microvisor & Linux ABI
     ██████████████▀      Filesystem: X1 Encrypted Fast Block FS
     ████████████▀        Privilege Layer: rac (Root Actions)
     █████████▀           Package Engine: dive (Cloud DPK)
-    ██████▀
+    ██████▀              Bootloader: Depth Hinux ASM / UEFI 64-bit
     ███▀
 ```
 
-Depth Hinux is an open-source bedrock operating system engineered from raw silicon. It replaces traditional bloated userland components with a custom, ultra-fast x86-64 assembly system architecture (**95.1% Pure ASM Core**), completely eliminating GNU bloatware, heavy libc wrappers, and runtime overhead.
+Depth Hinux is an open-source bedrock operating system engineered from raw silicon. It replaces traditional bloated userland components with a custom, ultra-fast x86-64 assembly system architecture, completely eliminating GNU bloatware, heavy libc wrappers, and runtime overhead.
 
 ---
 
 ## Key Highlights
 
-- **95.1% Pure x86-64 Assembly Layer**: Standalone pure assembly coreutils, driver daemons, partitioners, filesystem tools, bootloader, and microkernel.
+- **Pure x86-64 Assembly Layer**: Standalone pure assembly coreutils, driver daemons, partitioners, filesystem tools, bootloader, and microkernel.
+- **Dual Boot Architecture (MBR / CSM & GPT / UEFI)**:
+  - **MBR Mode (CSM / Legacy BIOS)**: Powered by Depth Hinux's custom pure assembly bootloader (`sys/bootloader/depth-boot.asm`), replacing legacy ISOLINUX with native bedrock boot code.
+  - **GPT Mode (UEFI 64-bit)**: Native UEFI support with EFI System Partition (`/EFI/BOOT/BOOTX64.EFI`), fully bootable on modern UEFI firmware and physical hardware.
 - **Custom X1 Filesystem (`x1fs`)**: Depth Hinux's proprietary encrypted filesystem (`0x58314653 [X1FS]`) engineered for maximum I/O throughput and hardware-accelerated encryption (`mkfs.x1`, `mount.x1`).
 - **Root Actions Controller (`rac`)**: Dedicated pure assembly privilege escalation system replacing `sudo` (`rac <command> [args...]`).
 - **Dive Package Engine (`dive`)**: Cloud-connected package manager utilizing `.dpk` (Depth Package) archives. Automatically downloads and merges split sections on-the-fly and cleans up temporary archives, preventing local disk bloat.
 - **Pure Assembly Drive Partitioner (`depthpart` / `part`)**: Native x86-64 assembly MBR partition editor and disk scanner with `BLKRRPART` kernel reloading.
 - **Pure Assembly Driver Daemon (`hinux-driverd`)**: Hardware telemetry monitor gathering real-time network and battery metrics into `/run/hinux/`.
-- **Glare Cinnamon Desktop**: Refined desktop experience with an upright red triangle logo, smooth red-to-black diagonal wallpaper, native Mozilla Firefox, Nemo file manager, and custom taskbar applets (`depth-network@depth.org`, `depth-power@depth.org`).
-- **Hybrid USB Flashdrive Bootable**: Generated hybrid ISO (`boot/depth-hinux.iso`) with pure assembly MBR bootloader (`depth-boot`), ready to burn and boot on physical USB flashdrives or optical media.
+- **Glare Cinnamon Desktop**: Refined desktop experience with an upright red triangle logo, smooth red-to-black diagonal wallpaper, native Mozilla Firefox with preconfigured DNS and SSL certificates, Nemo file manager, and custom taskbar applets (`depth-network@depth.org`, `depth-power@depth.org`).
+- **Hybrid USB Flashdrive Bootable**: Generated hybrid ISO (`boot/depth-hinux.iso`) ready to burn directly to physical USB flashdrives or optical media.
 - **Bedrock Hardware Installer TUI (`depthinstall`)**: Full interactive color TUI with block device discovery, automated X1 encrypted formatting, and live deployment progress bars.
 
 ---
@@ -47,10 +50,10 @@ Depth Hinux is an open-source bedrock operating system engineered from raw silic
 ```
 Depth/
 ├── Makefile             # Unified build, ISO creation, and QEMU virtual machine runners
-├── sys/                 # 95.1% Pure x86-64 assembly system layer
-│   ├── kernel/          # 100% Pure assembly microkernel (boot, IDT, MM, sched, syscall)
+├── sys/                 # Pure x86-64 assembly system layer
+│   ├── kernel/          # Pure assembly microkernel (boot, IDT, MM, sched, syscall)
 │   ├── asm/             # Syscall dispatch tables, memory allocators, string SIMD
-│   ├── bootloader/      # Pure assembly hybrid MBR bootloader (depth-boot.asm)
+│   ├── bootloader/      # Pure assembly El Torito & MBR bootloader (depth-boot.asm)
 │   ├── coreutils/       # Standalone ASM binaries (rac, mkfs.x1, mount.x1, depthpart, hinux-driverd, etc.)
 │   ├── glare/           # Glare Cinnamon session launcher, theme, and custom applets
 │   └── init/            # Static Bedrock PID 1 init system (mounting, networking, console)
@@ -62,50 +65,98 @@ Depth/
 │       └── packages/    # Pre-built packages (git, fastfetch, nano, curl, etc.)
 ├── boot/                # Bootloaders, initramfs builders, and ISO generators
 │   ├── build-initrd.sh  # Optimized initramfs packaging script (gzip -9)
-│   ├── build-iso.sh     # Hybrid bootable ISO generator with MBR injection
-│   └── depth-boot.bin   # Pure assembly hybrid MBR bootloader sector
+│   ├── build-iso.sh     # Hybrid bootable ISO generator for MBR and GPT UEFI
+│   ├── depth-boot.bin   # Pure assembly bootloader binary
+│   └── efiboot.img      # UEFI System Partition FAT32 boot image
 └── installer/           # Automated hardware installer TUI (depthinstall)
 ```
 
 ---
 
-## Building and Running
+## Building Depth Hinux
 
-### 1. Compile Everything
-```bash
-make
+### Interactive Build & Target Selection
+
+When running `make`, `make build`, `make bare`, or `make glare`, the build system interactively prompts for your desired edition and boot architecture:
+
+```
+Select Depth Hinux target mode:
+  [1] bare  (Bedrock minimal CLI)
+  [2] glare (Cinnamon Desktop Environment)
+Select [1/2, default 1]:
+
+Select bootloader target architecture:
+  [1] MBR (CSM / Legacy BIOS Bootloader)
+  [2] GPT (UEFI 64-bit Bootloader)
+Select [1/2, default 2]:
 ```
 
-### 2. Generate Hybrid Flashdrive-Bootable ISO
-```bash
-make iso
-```
-Outputs `boot/depth-hinux.iso`.
+### Direct Automated Builds
 
-### 3. Flash to Physical USB Flashdrive
-To boot on physical hardware, flash directly using `dd`:
+You can bypass interactive prompts by specifying command line variables:
+
+```bash
+make bare BOOT_ARCH=mbr
+make glare BOOT_ARCH=gpt
+make build MODE=glare BOOT_ARCH=gpt
+```
+
+---
+
+## Booting in QEMU
+
+### 1. UEFI GPT Boot (Recommended for Modern Systems)
+Boots using UEFI firmware (OVMF):
+```bash
+make run-uefi
+```
+
+### 2. MBR / CSM Legacy BIOS Boot
+Boots using SeaBIOS and Depth Hinux's custom pure assembly bootloader:
+```bash
+make run-mbr
+```
+
+### 3. Auto-Detecting ISO Boot
+Detects whether the generated ISO is formatted for UEFI or MBR and launches appropriate virtual firmware:
+```bash
+make run-iso
+```
+
+### 4. Direct Kernel Boot
+Boots the Linux kernel and Depth Hinux initramfs directly:
+```bash
+make run
+```
+
+### 5. Pure Assembly Microkernel
+Boots the native Depth Hinux assembly microkernel:
+```bash
+make run-kernel
+```
+
+### 6. Bedrock Serial CLI
+Boots in headless terminal mode:
+```bash
+make run-cli
+```
+
+---
+
+## Flashing to Physical USB Flashdrives
+
+To create a bootable USB flashdrive for real hardware:
+
+1. Identify your target flashdrive device path (e.g., `/dev/sdX` or `/dev/nvme0n1`).
+2. Write the image directly using `rac dd`:
+
 ```bash
 rac dd if=boot/depth-hinux.iso of=/dev/sdX bs=4M status=progress && sync
 ```
-*(Replace `/dev/sdX` with your target USB flashdrive device path).*
 
-### 4. Boot in QEMU Virtual Machine
-- **Graphical Glare Desktop**:
-  ```bash
-  make run
-  ```
-- **Live Hybrid ISO Boot**:
-  ```bash
-  make run-iso
-  ```
-- **Bedrock Pure ASM Kernel**:
-  ```bash
-  make run-kernel
-  ```
-- **Headless Terminal Mode**:
-  ```bash
-  make run-cli
-  ```
+Once written:
+- For **GPT / UEFI**: Insert the USB flashdrive, enter your BIOS boot menu (F12, F11, ESC, or F8), and select the UEFI USB entry.
+- For **MBR / CSM**: Enable CSM / Legacy Boot in BIOS settings and select the USB drive.
 
 ---
 
@@ -114,7 +165,6 @@ rac dd if=boot/depth-hinux.iso of=/dev/sdX bs=4M status=progress && sync
 Depth Hinux uses `rac` instead of `sudo`:
 
 ```bash
-# Authorize administrative actions:
 rac dive install git
 rac depthpart list
 rac mkfs.x1 /dev/sda1 -L DEPTH_ROOT
@@ -128,18 +178,27 @@ rac nano /etc/hosts
 `dive` provides fast, cloud-connected software management:
 
 ```bash
-rac dive install <pkg>             # Install package from local cache or GitHub cloud
-dive search [query]                # Search available packages in the repository
-dive list                          # List installed packages on the system
-dive info <pkg>                    # Inspect package metadata and tracked files
-dive verify <pkg>                  # Verify disk integrity of installed files
-rac dive remove <pkg>              # Cleanly remove package and unregister manifest
-dive split <file.dpk> [mb]         # Split large archive into GitHub upload sections
-dive merge <file.dpk.00> [out.dpk] # Reassemble sections into complete archive
-dive repo-index [dir]              # Re-index packages into repo.json
+rac dive install <pkg>
+dive search [query]
+dive list
+dive info <pkg>
+dive verify <pkg>
+rac dive remove <pkg>
+dive split <file.dpk> [mb]
+dive merge <file.dpk.00> [out.dpk]
+dive repo-index [dir]
 ```
 
-For full instructions on creating `.dpk` packages, section chunking, and publishing to GitHub, see [pkg/repo/README.md](pkg/repo/README.md).
+### Splitting and Cloud Hosting
+GitHub enforces a 25 MB web upload limit. Large packages (such as Firefox) are split into cloud upload sections:
+
+```bash
+dive split firefox.dpk 20
+```
+
+This generates `firefox.dpk.00`, `firefox.dpk.01`, etc., which are committed to `pkg/repo/packages/`. During installation, `dive install` automatically streams and merges all sections into `/tmp`, installs the package, and immediately purges temporary files to prevent disk usage bloat.
+
+For full packaging instructions, see [pkg/repo/README.md](pkg/repo/README.md).
 
 ---
 
@@ -148,12 +207,7 @@ For full instructions on creating `.dpk` packages, section chunking, and publish
 Format partitions with Depth Hinux's encrypted filesystem:
 
 ```bash
-# Format block device with X1 encrypted filesystem:
 rac mkfs.x1 /dev/sda1 -L DEPTH_ROOT
-# Or use the x1-format alias:
-rac x1-format /dev/vda1 -L DEPTH_ROOT
-
-# Mount X1 device:
 rac mount.x1 /dev/sda1 /mnt
 ```
 

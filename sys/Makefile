@@ -81,7 +81,8 @@ $(BIN_DIR)/x1-mount: $(BIN_DIR)/mount.x1
 	cp -f $< $@
 
 $(BIN_DIR)/depth-boot.bin: bootloader/depth-boot.asm
-	nasm -f bin $< -o $@
+	nasm -f bin $< -o $(BUILD_DIR)/depth-boot.raw
+	python3 -c "raw=open('$(BUILD_DIR)/depth-boot.raw','rb').read(); d=bytearray(raw + b'\x00'*(2048-len(raw))); d[510]=0x55; d[511]=0xaa; open('$@','wb').write(d)"
 	cp -f $@ ../boot/depth-boot.bin
 
 clean:

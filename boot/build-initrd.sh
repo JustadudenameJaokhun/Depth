@@ -124,13 +124,18 @@ EOF
 Default=default
 Locked=1
 EOF
-    printf 'user_pref("toolkit.telemetry.enabled", false);\nuser_pref("browser.shell.checkDefaultBrowser", false);\nuser_pref("browser.startup.homepage", "https://depth-hinux.org");\nuser_pref("browser.offline", false);\nuser_pref("network.dns.disableIPv6", true);\nuser_pref("network.trr.mode", 5);\n' > "$STAGING"/root/.mozilla/firefox/default/user.js
+    printf 'user_pref("toolkit.telemetry.enabled", false);\nuser_pref("browser.shell.checkDefaultBrowser", false);\nuser_pref("browser.startup.homepage", "https://depth-hinux.org");\nuser_pref("browser.offline", false);\nuser_pref("network.dns.disableIPv6", true);\nuser_pref("network.proxy.type", 0);\nuser_pref("network.http.network_access_on_socket_process.enabled", false);\nuser_pref("security.cert_pinning.enforcement_level", 1);\nuser_pref("security.nocertdb", false);\n' > "$STAGING"/root/.mozilla/firefox/default/user.js
     if [ -f "$STAGING"/usr/lib/firefox/firefox ]; then
         mv "$STAGING"/usr/lib/firefox/firefox "$STAGING"/usr/lib/firefox/firefox.real
-        cat << 'EOF' > "$STAGING"/usr/lib/firefox/firefox
-#!/bin/sh
+        printf '#!/bin/sh\n' > "$STAGING"/usr/lib/firefox/firefox
+        cat << 'EOF' >> "$STAGING"/usr/lib/firefox/firefox
 mkdir -p /root/.mozilla/firefox/default
-ip link set lo up 2>/dev/null || true
+export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+export SSL_CERT_DIR=/etc/ssl/certs
+/bin/ip link set lo up 2>/dev/null || true
+/bin/ip link set eth0 up 2>/dev/null || true
+/bin/ip addr add 10.0.2.15/24 dev eth0 2>/dev/null || true
+/bin/ip route add default via 10.0.2.2 dev eth0 2>/dev/null || true
 chown -R 0:0 /root 2>/dev/null || true
 rm -f /root/.mozilla/firefox/*/.parentlock /root/.mozilla/firefox/*/lock 2>/dev/null || true
 ARGS=""
@@ -145,6 +150,15 @@ EOF
         chmod +x "$STAGING"/usr/lib/firefox/firefox
         cp -f "$STAGING"/usr/lib/firefox/firefox "$STAGING"/usr/bin/firefox
         cp -f "$STAGING"/usr/lib/firefox/firefox "$STAGING"/bin/firefox
+    fi
+    mkdir -p "$STAGING"/etc/ca-certificates/extracted
+    if [ -f /etc/ca-certificates/extracted/tls-ca-bundle.pem ]; then
+        cp -f /etc/ca-certificates/extracted/tls-ca-bundle.pem "$STAGING"/etc/ca-certificates/extracted/tls-ca-bundle.pem
+    fi
+    mkdir -p "$STAGING"/etc/ssl/certs
+    if [ -f /etc/ca-certificates/extracted/tls-ca-bundle.pem ]; then
+        cp -f /etc/ca-certificates/extracted/tls-ca-bundle.pem "$STAGING"/etc/ssl/certs/ca-certificates.crt
+        cp -f /etc/ca-certificates/extracted/tls-ca-bundle.pem "$STAGING"/etc/ssl/cert.pem
     fi
     mkdir -p "$STAGING"/etc "$STAGING"/var/lib/dbus
     printf "9b8f2a1e0d3c4b5a6978123456789abc\n" > "$STAGING"/etc/machine-id
@@ -577,4 +591,6 @@ ldconfig -r "$STAGING" 2>/dev/null || true
 
 cd "$STAGING"
 find . -print0 | cpio --null --create --format=newc --owner 0:0 | gzip -9 > /home/jaokhun/Projects/Depth/boot/depth-bare-initrd.img
+cd /home/jaokhun/Projects/Depth
+chmod -R u+w "$STAGING" 2>/dev/null || true
 rm -rf "$STAGING"
