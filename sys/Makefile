@@ -23,6 +23,7 @@ COREUTILS = $(BIN_DIR)/echo $(BIN_DIR)/cat $(BIN_DIR)/ls $(BIN_DIR)/cp \
             $(BIN_DIR)/mkfs.x1 $(BIN_DIR)/x1-format $(BIN_DIR)/x1fs \
             $(BIN_DIR)/mount.x1 $(BIN_DIR)/x1-mount \
             $(BIN_DIR)/depth-bgd $(BIN_DIR)/depth-xsettings \
+            $(BIN_DIR)/cinnamon-killer-daemon $(BIN_DIR)/depth-powerd \
             $(BIN_DIR)/depth-boot.bin
 
 ASM_OBJS = $(BUILD_DIR)/string.o $(BUILD_DIR)/mem.o $(BUILD_DIR)/io.o \

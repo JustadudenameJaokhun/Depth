@@ -83,11 +83,14 @@ run:
 		-kernel /boot/vmlinuz-linux \
 		-initrd boot/depth-bare-initrd.img \
 		-append "console=ttyS0 console=tty0 loglevel=7 ignore_loglevel net.ifnames=0 biosdevname=0 panic=1 rdinit=/init" \
-		-netdev user,id=net0 \
+		-netdev user,id=net0,dns=1.1.1.1 \
 		-device e1000,netdev=net0 \
+		-audiodev pa,id=snd0 \
+		-device intel-hda \
+		-device hda-duplex,audiodev=snd0 \
 		-usb \
 		-device usb-tablet \
-		-vga std \
+		-device VGA,edid=on,xres=1920,yres=1080 \
 		-m 3072M \
 		-no-reboot
 
@@ -98,11 +101,14 @@ run-iso: iso
 			-bios /usr/share/edk2/x64/OVMF.4m.fd \
 			-drive file=boot/depth-hinux.iso,format=raw,media=disk \
 			-boot c \
-			-netdev user,id=net0 \
+			-netdev user,id=net0,dns=1.1.1.1 \
 			-device e1000,netdev=net0 \
+			-audiodev pa,id=snd0 \
+			-device intel-hda \
+			-device hda-duplex,audiodev=snd0 \
 			-usb \
 			-device usb-tablet \
-			-vga std \
+			-device VGA,edid=on,xres=1920,yres=1080 \
 			-m 3072M \
 			-no-reboot; \
 	else \
@@ -110,11 +116,14 @@ run-iso: iso
 			$(KVM_OPTS) \
 			-cdrom boot/depth-hinux.iso \
 			-boot d \
-			-netdev user,id=net0 \
+			-netdev user,id=net0,dns=1.1.1.1 \
 			-device e1000,netdev=net0 \
+			-audiodev pa,id=snd0 \
+			-device intel-hda \
+			-device hda-duplex,audiodev=snd0 \
 			-usb \
 			-device usb-tablet \
-			-vga std \
+			-device VGA,edid=on,xres=1920,yres=1080 \
 			-m 3072M \
 			-no-reboot; \
 	fi
@@ -125,11 +134,14 @@ run-uefi:
 		-bios /usr/share/edk2/x64/OVMF.4m.fd \
 		-drive file=boot/depth-hinux.iso,format=raw,media=disk \
 		-boot c \
-		-netdev user,id=net0 \
+		-netdev user,id=net0,dns=1.1.1.1 \
 		-device e1000,netdev=net0 \
+		-audiodev pa,id=snd0 \
+		-device intel-hda \
+		-device hda-duplex,audiodev=snd0 \
 		-usb \
 		-device usb-tablet \
-		-vga std \
+		-device VGA,edid=on,xres=1920,yres=1080 \
 		-m 3072M \
 		-no-reboot
 
@@ -138,11 +150,14 @@ run-mbr:
 		$(KVM_OPTS) \
 		-cdrom boot/depth-hinux.iso \
 		-boot d \
-		-netdev user,id=net0 \
+		-netdev user,id=net0,dns=1.1.1.1 \
 		-device e1000,netdev=net0 \
+		-audiodev pa,id=snd0 \
+		-device intel-hda \
+		-device hda-duplex,audiodev=snd0 \
 		-usb \
 		-device usb-tablet \
-		-vga std \
+		-device VGA,edid=on,xres=1920,yres=1080 \
 		-m 3072M \
 		-no-reboot
 

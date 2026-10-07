@@ -118,7 +118,7 @@ EOF
 Default=default
 Locked=1
 EOF
-    printf 'user_pref("toolkit.telemetry.enabled", false);\nuser_pref("browser.shell.checkDefaultBrowser", false);\nuser_pref("browser.startup.homepage", "https://depth-hinux.org");\nuser_pref("browser.offline", false);\nuser_pref("network.dns.disableIPv6", true);\nuser_pref("network.proxy.type", 0);\nuser_pref("network.http.network_access_on_socket_process.enabled", false);\nuser_pref("security.cert_pinning.enforcement_level", 1);\nuser_pref("security.nocertdb", false);\n' > "$STAGING"/root/.mozilla/firefox/default/user.js
+    printf 'user_pref("toolkit.telemetry.enabled", false);\nuser_pref("browser.shell.checkDefaultBrowser", false);\nuser_pref("browser.startup.homepage", "about:home");\nuser_pref("browser.offline", false);\nuser_pref("network.dns.disableIPv6", true);\nuser_pref("network.proxy.type", 0);\nuser_pref("media.rdd-ffmpeg.enabled", true);\nuser_pref("media.ffmpeg.vaapi.enabled", false);\nuser_pref("media.hardware-video-decoding.enabled", false);\nuser_pref("security.cert_pinning.enforcement_level", 1);\nuser_pref("security.nocertdb", false);\n' > "$STAGING"/root/.mozilla/firefox/default/user.js
     if [ -f "$STAGING"/usr/lib/firefox/firefox ]; then
         mv "$STAGING"/usr/lib/firefox/firefox "$STAGING"/usr/lib/firefox/firefox.real
         printf '#!/bin/sh\n' > "$STAGING"/usr/lib/firefox/firefox
@@ -573,6 +573,8 @@ PYEOF
     rm -rf "$STAGING"/usr/share/cinnamon/applets/printers@cinnamon.org
     mkdir -p "$STAGING"/root/.config/cinnamon/spices/menu@cinnamon.org
     printf '{"menu-custom":{"type":"switch","default":false,"value":true},"menu-label":{"type":"entry","default":"Menu","value":"Depth"},"menu-icon":{"type":"iconfilechooser","default":"cinnamon-symbolic","value":"/usr/share/icons/depth-triangle.svg"},"menu-icon-size":{"type":"spinbutton","default":32,"value":32.0}}\n' > "$STAGING"/root/.config/cinnamon/spices/menu@cinnamon.org/0.json
+    mkdir -p "$STAGING"/root/.cinnamon/configs/grouped-window-list@cinnamon.org
+    printf '{"pinned-apps":{"type":"generic","value":["depth-terminal.desktop","firefox.desktop","nemo.desktop","depth-install.desktop","depth-part.desktop","depth-network.desktop"]},"enable-app-button-dragging":{"type":"checkbox","value":true},"group-apps":{"type":"checkbox","value":true},"title-display":{"type":"combobox","value":1}}\n' > "$STAGING"/root/.cinnamon/configs/grouped-window-list@cinnamon.org/2.json
     mkdir -p "$STAGING"/tmp/.X11-unix "$STAGING"/run/user/0 "$STAGING"/var/lib/dbus "$STAGING"/etc/X11
     rm -rf "$STAGING"/var/run
     ln -sf /run "$STAGING"/var/run
@@ -584,7 +586,8 @@ PYEOF
     ln -sf /usr/bin/cinnamon2d "$STAGING"/bin/cinnamon2d
     ln -sf /usr/bin/muffin "$STAGING"/bin/muffin
     ln -sf /usr/bin/nemo "$STAGING"/bin/nemo
-    ln -sf /bin/cinnamon-watchdog "$STAGING"/usr/bin/cinnamon-killer-daemon
+    ln -sf /bin/cinnamon-killer-daemon "$STAGING"/usr/bin/cinnamon-killer-daemon
+    ln -sf /bin/depth-powerd "$STAGING"/usr/bin/depth-powerd
     ln -sf /bin/glare-launcher "$STAGING"/usr/bin/glare-launcher
     ln -sf /bin/cinnamon-autostart "$STAGING"/usr/bin/cinnamon-autostart
     ln -sf /bin/dpk-verify "$STAGING"/usr/bin/dpk-verify
@@ -610,7 +613,7 @@ Section "Screen"
     DefaultDepth 24
     SubSection "Display"
         Depth 24
-        Modes "1024x768"
+        Modes "1920x1080" "1024x768"
     EndSubSection
 EndSection
 
@@ -630,6 +633,10 @@ fi
 mkdir -p "$STAGING"/usr/lib/modules
 cp -f /home/jaokhun/Projects/Depth/boot/modules/e1000.ko "$STAGING"/usr/lib/modules/ 2>/dev/null || true
 cp -f /home/jaokhun/Projects/Depth/boot/modules/bochs.ko "$STAGING"/usr/lib/modules/ 2>/dev/null || true
+cp -f /home/jaokhun/Projects/Depth/boot/modules/snd-hda-*.ko "$STAGING"/usr/lib/modules/ 2>/dev/null || true
+for mlib in /usr/lib/libavcodec* /usr/lib/libavformat* /usr/lib/libavutil* /usr/lib/libswresample* /usr/lib/libasound* /usr/lib/libpulse*; do
+    cp -af "$mlib" "$STAGING"/usr/lib/ 2>/dev/null || true
+done
 
 python3 - << 'PYEOF'
 import os, glob, subprocess, re

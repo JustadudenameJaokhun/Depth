@@ -51,6 +51,12 @@
       "file": "cinnamon.dpk",
       "size": 539,
       "sha256": "eda32851a7139afea73108e3309558aa0469d70109453670a9ba0e90f78c06dd"
+    },
+    {
+      "name": "gparted",
+      "file": "gparted.dpk",
+      "size": 4967326,
+      "sha256": "2cba32c4e4370861b27d0e885c600e41618b1b589049fc70494500c869f32902"
     }
   ]
 }

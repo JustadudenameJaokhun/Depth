@@ -92,6 +92,26 @@ int main(void) {
     mkdir("/dev/pts", 0755);
     mount("devpts", "/dev/pts", "devpts", 0, NULL);
 
+    int is_qemu = 0;
+    FILE *fdmi = fopen("/sys/class/dmi/id/sys_vendor", "r");
+    if (fdmi) {
+        char vbuf[64] = {0};
+        if (fgets(vbuf, sizeof(vbuf), fdmi)) {
+            if (strstr(vbuf, "QEMU") || strstr(vbuf, "Bochs")) is_qemu = 1;
+        }
+        fclose(fdmi);
+    }
+    if (!is_qemu) {
+        FILE *fpnm = fopen("/sys/class/dmi/id/product_name", "r");
+        if (fpnm) {
+            char pbuf[64] = {0};
+            if (fgets(pbuf, sizeof(pbuf), fpnm)) {
+                if (strstr(pbuf, "QEMU") || strstr(pbuf, "Standard PC") || strstr(pbuf, "Bochs")) is_qemu = 1;
+            }
+            fclose(fpnm);
+        }
+    }
+
     int mod_fd = open("/lib/modules/e1000.ko", O_RDONLY);
     if (mod_fd >= 0) {
         syscall(SYS_finit_module, mod_fd, "", 0);
@@ -100,8 +120,23 @@ int main(void) {
 
     int drm_fd = open("/lib/modules/bochs.ko", O_RDONLY);
     if (drm_fd >= 0) {
-        syscall(SYS_finit_module, drm_fd, "", 0);
+        syscall(SYS_finit_module, drm_fd, is_qemu ? "defx=1920 defy=1080" : "", 0);
         close(drm_fd);
+    }
+
+    const char *extra_mods[] = {
+        "/lib/modules/snd-hda-core.ko",
+        "/lib/modules/snd-hda-codec.ko",
+        "/lib/modules/snd-hda-codec-generic.ko",
+        "/lib/modules/snd-hda-intel.ko",
+        NULL
+    };
+    for (int mi = 0; extra_mods[mi]; mi++) {
+        int efd = open(extra_mods[mi], O_RDONLY);
+        if (efd >= 0) {
+            syscall(SYS_finit_module, efd, "", 0);
+            close(efd);
+        }
     }
 
     sethostname("dimensions", 10);
@@ -132,7 +167,7 @@ int main(void) {
 
     FILE *fresolv = fopen("/etc/resolv.conf", "w");
     if (fresolv) {
-        fputs("nameserver 10.0.2.3\nnameserver 1.1.1.1\nnameserver 8.8.8.8\n", fresolv);
+        fputs("nameserver 1.1.1.1\nnameserver 8.8.8.8\nnameserver 10.0.2.3\n", fresolv);
         fclose(fresolv);
     }
 
@@ -149,9 +184,11 @@ int main(void) {
     }
 
     system("/bin/ip link set lo up 2>/dev/null || true");
-    system("/bin/ip link set eth0 up 2>/dev/null || true");
-    system("/bin/ip addr add 10.0.2.15/24 dev eth0 2>/dev/null || true");
-    system("/bin/ip route add default via 10.0.2.2 dev eth0 2>/dev/null || true");
+    if (is_qemu) {
+        system("/bin/ip link set eth0 up 2>/dev/null || true");
+        system("/bin/ip addr add 10.0.2.15/24 dev eth0 2>/dev/null || true");
+        system("/bin/ip route add default via 10.0.2.2 dev eth0 2>/dev/null || true");
+    }
 
     mkdir("/run/user", 0755);
     mkdir("/run/user/0", 0700);

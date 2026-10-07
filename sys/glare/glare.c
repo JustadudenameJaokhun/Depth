@@ -226,6 +226,34 @@ int main(int argc, char **argv) {
             }
             if (ui_pid > 0) waitpid(ui_pid, NULL, 0);
         }
+        int is_qemu = 0;
+        FILE *fdmi = fopen("/sys/class/dmi/id/sys_vendor", "r");
+        if (fdmi) {
+            char vbuf[64] = {0};
+            if (fgets(vbuf, sizeof(vbuf), fdmi)) {
+                if (strstr(vbuf, "QEMU") || strstr(vbuf, "Bochs")) is_qemu = 1;
+            }
+            fclose(fdmi);
+        }
+        if (!is_qemu) {
+            FILE *fpnm = fopen("/sys/class/dmi/id/product_name", "r");
+            if (fpnm) {
+                char pbuf[64] = {0};
+                if (fgets(pbuf, sizeof(pbuf), fpnm)) {
+                    if (strstr(pbuf, "QEMU") || strstr(pbuf, "Standard PC") || strstr(pbuf, "Bochs")) is_qemu = 1;
+                }
+                fclose(fpnm);
+            }
+        }
+        if (is_qemu && access("/usr/bin/xrandr", X_OK) == 0) {
+            pid_t xr_pid = fork();
+            if (xr_pid == 0) {
+                char *xr_args[] = {"/usr/bin/xrandr", "-s", "1920x1080", NULL};
+                execv("/usr/bin/xrandr", xr_args);
+                exit(0);
+            }
+            if (xr_pid > 0) waitpid(xr_pid, NULL, 0);
+        }
         set_depth_wallpaper();
     }
 
@@ -263,6 +291,22 @@ int main(int argc, char **argv) {
         if (fork() == 0) {
             char *wd_args[] = {"/bin/cinnamon-watchdog", NULL};
             execv("/bin/cinnamon-watchdog", wd_args);
+            exit(0);
+        }
+    }
+
+    if (access("/bin/cinnamon-killer-daemon", X_OK) == 0) {
+        if (fork() == 0) {
+            char *kd_args[] = {"/bin/cinnamon-killer-daemon", NULL};
+            execv("/bin/cinnamon-killer-daemon", kd_args);
+            exit(0);
+        }
+    }
+
+    if (access("/bin/depth-powerd", X_OK) == 0) {
+        if (fork() == 0) {
+            char *pd_args[] = {"/bin/depth-powerd", NULL};
+            execv("/bin/depth-powerd", pd_args);
             exit(0);
         }
     }

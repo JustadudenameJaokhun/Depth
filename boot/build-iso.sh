@@ -106,7 +106,7 @@ else
     mcopy -i "$EFI_IMG" /home/jaokhun/Projects/Depth/boot/depth-bare-initrd.img ::boot/initrd.img
 
     python3 - << 'PYEOF'
-loader_conf = "default depth.conf\ntimeout 1\nconsole-mode max\n"
+loader_conf = "default depth.conf\ntimeout 0\nconsole-mode max\n"
 depth_conf = "title Depth Hinux (UEFI GPT)\nlinux /boot/vmlinuz\ninitrd /boot/initrd.img\noptions console=ttyS0 console=tty0 loglevel=7 ignore_loglevel net.ifnames=0 biosdevname=0 panic=1 rdinit=/init\n"
 with open("/tmp/depth_loader.conf", "w") as f:
     f.write(loader_conf)
