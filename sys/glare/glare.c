@@ -97,6 +97,8 @@ int main(int argc, char **argv) {
     setenv("CINNAMON_SLOWDOWN_FACTOR", "1.0", 1);
     setenv("MUFFIN_NO_SHADOWS", "1", 1);
     setenv("NO_AT_BRIDGE", "1", 1);
+    setenv("LANG", "C.UTF-8", 1);
+    setenv("LC_ALL", "C.UTF-8", 1);
     setenv("HOME", "/root", 1);
     setenv("USER", "root", 1);
     setenv("LOGNAME", "root", 1);
@@ -117,6 +119,22 @@ int main(int argc, char **argv) {
     mkdir("/root/.config/dconf", 0700);
     mkdir("/run/dbus", 0755);
     mkdir("/var/run/dbus", 0755);
+    mkdir("/var/lib", 0755);
+    mkdir("/var/lib/dbus", 0755);
+    if (access("/etc/machine-id", F_OK) != 0) {
+        FILE *fmid = fopen("/etc/machine-id", "w");
+        if (fmid) {
+            fputs("9b8f2a1e0d3c4b5a6978123456789abc\n", fmid);
+            fclose(fmid);
+        }
+    }
+    if (access("/var/lib/dbus/machine-id", F_OK) != 0) {
+        FILE *fdbusmid = fopen("/var/lib/dbus/machine-id", "w");
+        if (fdbusmid) {
+            fputs("9b8f2a1e0d3c4b5a6978123456789abc\n", fdbusmid);
+            fclose(fdbusmid);
+        }
+    }
     setenv("XDG_RUNTIME_DIR", "/run/user/0", 1);
     setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/run/user/0/bus", 1);
 
@@ -228,6 +246,30 @@ int main(int argc, char **argv) {
         }
     }
 
+    if (access("/bin/cinnamon-watchdog", X_OK) == 0) {
+        if (fork() == 0) {
+            char *wd_args[] = {"/bin/cinnamon-watchdog", NULL};
+            execv("/bin/cinnamon-watchdog", wd_args);
+            exit(0);
+        }
+    }
+
+    if (access("/usr/lib/dconf-service", X_OK) == 0) {
+        if (fork() == 0) {
+            char *dc_args[] = {"/usr/lib/dconf-service", NULL};
+            execv("/usr/lib/dconf-service", dc_args);
+            exit(0);
+        }
+    }
+
+    if (access("/usr/lib/gnome-terminal-server", X_OK) == 0) {
+        if (fork() == 0) {
+            char *gt_args[] = {"/usr/lib/gnome-terminal-server", NULL};
+            execv("/usr/lib/gnome-terminal-server", gt_args);
+            exit(0);
+        }
+    }
+
     if (access("/usr/bin/nemo-desktop", X_OK) == 0) {
         if (fork() == 0) {
             char *nemo_args[] = {"/usr/bin/nemo-desktop", NULL};
@@ -239,24 +281,18 @@ int main(int argc, char **argv) {
     set_depth_wallpaper();
     pid_t sess_pid = fork();
     if (sess_pid == 0) {
-        if (access("/usr/bin/cinnamon", X_OK) == 0) {
+        if (access("/usr/bin/cinnamon2d", X_OK) == 0) {
             printf("\033[1;32m[GLARE]\033[0m Starting Cinnamon Desktop Shell...\n\n");
             fflush(stdout);
-            char *cin_args[] = {
-                "/usr/bin/cinnamon",
-                "--replace",
-                "--x11",
-                "--sm-disable",
-                NULL
-            };
-            execv("/usr/bin/cinnamon", cin_args);
             char *c2d_args[] = {"/usr/bin/cinnamon2d", "--replace", "--x11", "--sm-disable", NULL};
             execv("/usr/bin/cinnamon2d", c2d_args);
-        } else if (access("/usr/bin/cinnamon2d", X_OK) == 0) {
+            char *cin_args[] = {"/usr/bin/cinnamon", "--replace", "--x11", "--sm-disable", NULL};
+            execv("/usr/bin/cinnamon", cin_args);
+        } else if (access("/usr/bin/cinnamon", X_OK) == 0) {
             printf("\033[1;32m[GLARE]\033[0m Starting Cinnamon Desktop Environment...\n\n");
             fflush(stdout);
-            char *c2d_args[] = {"/usr/bin/cinnamon2d", "--replace", "--x11", "--sm-disable", NULL};
-            execv("/usr/bin/cinnamon2d", c2d_args);
+            char *cin_args[] = {"/usr/bin/cinnamon", "--replace", "--x11", "--sm-disable", NULL};
+            execv("/usr/bin/cinnamon", cin_args);
         } else if (access("/usr/bin/muffin", X_OK) == 0) {
             printf("\033[1;32m[GLARE]\033[0m Starting Muffin Window Compositor...\n\n");
             fflush(stdout);

@@ -79,6 +79,7 @@ int main(void) {
     mkdir("/run", 0755);
     mkdir("/etc", 0755);
     mkdir("/root", 0700);
+    chown("/root", 0, 0);
 
     mount("devtmpfs", "/dev", "devtmpfs", 0, NULL);
     mount("proc", "/proc", "proc", 0, NULL);
@@ -149,12 +150,29 @@ int main(void) {
     setenv("LOGNAME", "root", 1);
     setenv("HOSTNAME", "dimensions", 1);
     setenv("TERM", "linux", 1);
+    setenv("LANG", "C.UTF-8", 1);
+    setenv("LC_ALL", "C.UTF-8", 1);
     setenv("PS1", "\033[1;31mdepth-hinux \033[0;31m~/\033[0m ", 1);
+
+    FILE *fmid = fopen("/etc/machine-id", "w");
+    if (fmid) {
+        fputs("9b8f2a1e0d3c4b5a6978123456789abc\n", fmid);
+        fclose(fmid);
+    }
+    mkdir("/var/lib", 0755);
+    mkdir("/var/lib/dbus", 0755);
+    FILE *fdbusmid = fopen("/var/lib/dbus/machine-id", "w");
+    if (fdbusmid) {
+        fputs("9b8f2a1e0d3c4b5a6978123456789abc\n", fdbusmid);
+        fclose(fdbusmid);
+    }
 
     FILE *fprof = fopen("/etc/profile", "w");
     if (fprof) {
         fputs("export PATH=/bin:/sbin:/usr/bin:/usr/sbin\n", fprof);
         fputs("export HOME=/root\n", fprof);
+        fputs("export LANG=C.UTF-8\n", fprof);
+        fputs("export LC_ALL=C.UTF-8\n", fprof);
         fputs("export PS1=\"\\033[1;31mdepth-hinux \\033[0;31m~/\\033[0m \"\n", fprof);
         fputs("export TERM=linux\n", fprof);
         fclose(fprof);

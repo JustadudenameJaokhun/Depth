@@ -53,7 +53,7 @@ MODE_VAL="${MODE:-bare}"
 printf "%s\n" "$MODE_VAL" > "$STAGING"/etc/depth-mode
 
 if [ "$MODE_VAL" = "glare" ]; then
-    for b in /usr/bin/bwrap /usr/lib/Xorg /usr/bin/Xorg /usr/bin/xkbcomp /usr/bin/cinnamon /usr/bin/cinnamon2d /usr/bin/cinnamon-session /usr/bin/cinnamon-session-cinnamon /usr/bin/cinnamon-session-quit /usr/bin/cinnamon-settings /usr/bin/cinnamon-launcher /usr/bin/cinnamon-killer-daemon /usr/bin/muffin /usr/bin/nemo /usr/bin/nemo-desktop /usr/bin/dbus-daemon /usr/bin/dbus-launch /usr/bin/dbus-uuidgen /usr/bin/python3 /usr/bin/gnome-terminal /usr/bin/cjs /usr/bin/cjs-console /usr/bin/pkill /usr/bin/killall /usr/bin/setxkbmap /usr/bin/xmodmap /usr/bin/xrdb /usr/bin/cinnamon-subprocess-wrapper /usr/lib/libEGL_mesa.so.0 /usr/lib/libGLX_mesa.so.0 /usr/lib/libEGL.so.1 /usr/lib/libGL.so.1 /usr/lib/libGLdispatch.so.0 /usr/lib/gnome-terminal-server /usr/lib/cinnamon-settings-daemon/csd-xsettings /usr/lib/cinnamon-settings-daemon/csd-background /usr/lib/systemd/systemd-udevd /usr/bin/udevadm; do
+    for b in /usr/bin/bwrap /usr/lib/Xorg /usr/bin/Xorg /usr/bin/xkbcomp /usr/bin/cinnamon /usr/bin/cinnamon2d /usr/bin/cinnamon-session /usr/bin/cinnamon-session-cinnamon /usr/bin/cinnamon-session-quit /usr/bin/cinnamon-settings /usr/bin/cinnamon-launcher /usr/bin/cinnamon-killer-daemon /usr/bin/muffin /usr/bin/nemo /usr/bin/nemo-desktop /usr/bin/dbus-daemon /usr/bin/dbus-launch /usr/bin/dbus-uuidgen /usr/bin/python3 /usr/bin/gnome-terminal /usr/bin/cjs /usr/bin/cjs-console /usr/bin/pkill /usr/bin/killall /usr/bin/setxkbmap /usr/bin/xmodmap /usr/bin/xrdb /usr/bin/cinnamon-subprocess-wrapper /usr/lib/libEGL_mesa.so.0 /usr/lib/libGLX_mesa.so.0 /usr/lib/libEGL.so.1 /usr/lib/libGL.so.1 /usr/lib/libGLdispatch.so.0 /usr/lib/gnome-terminal-server /usr/lib/gio-launch-desktop /usr/bin/firefox /usr/lib/dconf-service /usr/lib/gvfsd /usr/lib/cinnamon-settings-daemon/csd-xsettings /usr/lib/cinnamon-settings-daemon/csd-background /usr/lib/systemd/systemd-udevd /usr/bin/udevadm; do
         if [ -f "$b" ]; then
             td="$STAGING"$(dirname "$b")
             mkdir -p "$td"
@@ -61,15 +61,70 @@ if [ "$MODE_VAL" = "glare" ]; then
             chmod +x "$td"/"$(basename "$b")"
         fi
     done
+    mkdir -p "$STAGING"/usr/lib/firefox
+    cp -af /usr/lib/firefox/* "$STAGING"/usr/lib/firefox/ 2>/dev/null || true
+    for rem in crashreporter crashhelper pingsender gfxtest; do
+        rm -f "$STAGING"/usr/lib/firefox/"$rem"
+    done
+    cp -f /usr/bin/firefox "$STAGING"/bin/firefox 2>/dev/null || true
+    cp -f /usr/bin/firefox "$STAGING"/usr/bin/firefox 2>/dev/null || true
+    chmod +x "$STAGING"/bin/firefox "$STAGING"/usr/bin/firefox 2>/dev/null || true
+    mkdir -p "$STAGING"/root/.mozilla/firefox/default
+    cat << 'EOF' > "$STAGING"/root/.mozilla/firefox/profiles.ini
+[Profile0]
+Name=default
+IsRelative=1
+Path=default
+Default=1
+
+[General]
+StartWithLastProfile=1
+Version=2
+EOF
+    cat << 'EOF' > "$STAGING"/root/.mozilla/firefox/installs.ini
+[4F96D1932A9F858E]
+Default=default
+Locked=1
+EOF
+    printf 'user_pref("toolkit.telemetry.enabled", false);\nuser_pref("browser.shell.checkDefaultBrowser", false);\nuser_pref("browser.startup.homepage", "https://depth-hinux.org");\n' > "$STAGING"/root/.mozilla/firefox/default/user.js
+    if [ -f "$STAGING"/usr/lib/firefox/firefox ]; then
+        mv "$STAGING"/usr/lib/firefox/firefox "$STAGING"/usr/lib/firefox/firefox.real
+        cat << 'EOF' > "$STAGING"/usr/lib/firefox/firefox
+#!/bin/sh
+mkdir -p /root/.mozilla/firefox/default
+chown -R 0:0 /root 2>/dev/null || true
+rm -f /root/.mozilla/firefox/*/.parentlock /root/.mozilla/firefox/*/lock 2>/dev/null || true
+ARGS=""
+for a in "$@"; do
+    case "$a" in
+        %u|%U) ;;
+        *) ARGS="$ARGS $a" ;;
+    esac
+done
+exec /usr/lib/firefox/firefox.real --profile /root/.mozilla/firefox/default --new-instance $ARGS
+EOF
+        chmod +x "$STAGING"/usr/lib/firefox/firefox
+        cp -f "$STAGING"/usr/lib/firefox/firefox "$STAGING"/usr/bin/firefox
+        cp -f "$STAGING"/usr/lib/firefox/firefox "$STAGING"/bin/firefox
+    fi
+    mkdir -p "$STAGING"/etc "$STAGING"/var/lib/dbus
+    printf "9b8f2a1e0d3c4b5a6978123456789abc\n" > "$STAGING"/etc/machine-id
+    printf "9b8f2a1e0d3c4b5a6978123456789abc\n" > "$STAGING"/var/lib/dbus/machine-id
+    if [ -f "$STAGING"/usr/share/dbus-1/services/org.gnome.Terminal.service ]; then
+        sed -i '/SystemdService=/d' "$STAGING"/usr/share/dbus-1/services/org.gnome.Terminal.service
+    fi
     mkdir -p "$STAGING"/usr/lib/cinnamon-session
     cp -af /usr/lib/cinnamon-session/* "$STAGING"/usr/lib/cinnamon-session/ 2>/dev/null || true
-    for d in /usr/lib/xorg/modules /usr/lib/dri /usr/lib/gbm /usr/share/glvnd /usr/share/xkeyboard-config-2 /usr/share/cinnamon /usr/share/cinnamon-session /usr/share/glib-2.0/schemas /usr/lib/cinnamon /usr/lib/cinnamon-settings-daemon /usr/lib/muffin /usr/lib/cjs /usr/lib/gtk-3.0 /usr/lib/xapps /usr/lib/glycin-loaders /usr/share/glycin-loaders /usr/lib/python3.14 /etc/dbus-1 /usr/share/dbus-1 /usr/lib/girepository-1.0 /usr/share/icons/hicolor /usr/share/icons/Adwaita /usr/share/icons/AdwaitaLegacy /usr/share/icons/default /usr/share/applications /usr/share/xsessions /etc/xdg /usr/share/xml/iso-codes /usr/share/mime /usr/lib/udev/rules.d /usr/share/libinput; do
+    for d in /usr/lib/locale /usr/lib/gio/modules /etc/ssl/certs /usr/share/ca-certificates /usr/lib/xorg/modules /usr/lib/dri /usr/lib/gbm /usr/share/glvnd /usr/share/xkeyboard-config-2 /usr/share/cinnamon /usr/share/cinnamon-session /usr/share/glib-2.0/schemas /usr/lib/cinnamon /usr/lib/cinnamon-settings-daemon /usr/lib/muffin /usr/lib/cjs /usr/lib/gtk-3.0 /usr/lib/xapps /usr/lib/glycin-loaders /usr/share/glycin-loaders /usr/lib/python3.14 /etc/dbus-1 /usr/share/dbus-1 /usr/lib/girepository-1.0 /usr/share/icons/hicolor /usr/share/icons/Adwaita /usr/share/icons/AdwaitaLegacy /usr/share/icons/default /usr/share/applications /usr/share/xsessions /etc/xdg /usr/share/xml/iso-codes /usr/share/mime /usr/lib/udev/rules.d /usr/share/libinput; do
         if [ -d "$d" ]; then
             td="$STAGING"$(dirname "$d")
             mkdir -p "$td"
             cp -a "$d" "$td"/ 2>/dev/null || true
         fi
     done
+    if [ -x /usr/bin/gio-querymodules ]; then
+        gio-querymodules "$STAGING"/usr/lib/gio/modules 2>/dev/null || true
+    fi
     mkdir -p "$STAGING"/usr/share/X11/xorg.conf.d
     cat << 'EOF' > "$STAGING"/usr/share/X11/xorg.conf.d/40-libinput.conf
 Section "InputClass"
@@ -314,7 +369,7 @@ PYEOF
     mkdir -p "$STAGING"/usr/share/backgrounds/gnome
     cp -f "$STAGING"/usr/share/backgrounds/depth-wallpaper.png "$STAGING"/usr/share/backgrounds/gnome/adwaita-l.jxl 2>/dev/null || true
     cp -f "$STAGING"/usr/share/backgrounds/depth-wallpaper.png "$STAGING"/usr/share/backgrounds/gnome/adwaita-d.jxl 2>/dev/null || true
-    printf "[org.nemo.preferences]\ntreat-root-as-normal=true\nshow-desktop-icons=true\n\n[org.nemo.desktop]\nshow-desktop-icons=true\nbackground-fade=false\n\n[org.gnome.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#d32f2f'\nsecondary-color='#08080c'\ncolor-shading-type='solid'\n\n[org.gnome.desktop.interface]\nicon-theme='Flat-Remix-Red-Dark'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#d32f2f'\nsecondary-color='#08080c'\ncolor-shading-type='solid'\n\n[org.cinnamon.desktop.interface]\nicon-theme='Flat-Remix-Red-Dark'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon]\ndesktop-effects=true\ndesktop-effects-on-menus=false\nwindow-effect-speed=2\nstartup-animation=false\nalttab-switcher-delay=0\napp-menu-label='Depth'\napp-menu-icon-name='/usr/share/icons/depth-triangle.svg'\n\n[org.cinnamon.muffin]\nunredirect-fullscreen-windows=true\nattach-modal-dialogs=true\n\n[org.cinnamon.theme]\nname='Default'\n" > "$STAGING"/usr/share/glib-2.0/schemas/99_depth.gschema.override
+    printf "[org.nemo.preferences]\ntreat-root-as-normal=true\nshow-desktop-icons=true\n\n[org.nemo.desktop]\nshow-desktop-icons=true\nbackground-fade=false\n\n[org.gnome.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#d32f2f'\nsecondary-color='#08080c'\ncolor-shading-type='solid'\n\n[org.gnome.desktop.interface]\nicon-theme='Flat-Remix-Red-Dark'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon.desktop.background]\npicture-options='zoom'\npicture-uri='file:///usr/share/backgrounds/depth-wallpaper.png'\npicture-uri-dark='file:///usr/share/backgrounds/depth-wallpaper.png'\nprimary-color='#d32f2f'\nsecondary-color='#08080c'\ncolor-shading-type='solid'\n\n[org.cinnamon.desktop.interface]\nicon-theme='Flat-Remix-Red-Dark'\ngtk-theme='Adwaita-dark'\nfont-name='Liberation Sans 10'\n\n[org.cinnamon.desktop.default-applications.terminal]\nexec='gnome-terminal'\nexec-arg='--'\n\n[org.gnome.Terminal.ProfilesList]\ndefault='b1dcc9dd-5262-4d8d-a863-c897e6d979b9'\nlist=['b1dcc9dd-5262-4d8d-a863-c897e6d979b9']\n\n[org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/]\nvisible-name='Depth'\nbackground-color='#101114'\nforeground-color='#f0f0f0'\nuse-theme-colors=false\ndefault-size-columns=80\ndefault-size-rows=24\n\n[org.cinnamon]\ndesktop-effects=true\ndesktop-effects-on-menus=false\nwindow-effect-speed=2\nstartup-animation=false\nalttab-switcher-delay=0\napp-menu-label='Depth'\napp-menu-icon-name='/usr/share/icons/depth-triangle.svg'\n\n[org.cinnamon.muffin]\nunredirect-fullscreen-windows=true\nattach-modal-dialogs=true\n\n[org.cinnamon.theme]\nname='Default'\n" > "$STAGING"/usr/share/glib-2.0/schemas/99_depth.gschema.override
     glib-compile-schemas "$STAGING"/usr/share/glib-2.0/schemas/ 2>/dev/null || true
     mkdir -p "$STAGING"/root/.config/cinnamon/spices/menu@cinnamon.org
     printf '{"menu-custom":{"type":"switch","default":false,"value":true},"menu-label":{"type":"entry","default":"Menu","value":"Depth"},"menu-icon":{"type":"iconfilechooser","default":"cinnamon-symbolic","value":"/usr/share/icons/depth-triangle.svg"},"menu-icon-size":{"type":"spinbutton","default":32,"value":32.0}}\n' > "$STAGING"/root/.config/cinnamon/spices/menu@cinnamon.org/0.json
@@ -329,6 +384,10 @@ PYEOF
     ln -sf /usr/bin/cinnamon2d "$STAGING"/bin/cinnamon2d
     ln -sf /usr/bin/muffin "$STAGING"/bin/muffin
     ln -sf /usr/bin/nemo "$STAGING"/bin/nemo
+    ln -sf /bin/cinnamon-watchdog "$STAGING"/usr/bin/cinnamon-killer-daemon
+    ln -sf /bin/glare-launcher "$STAGING"/usr/bin/glare-launcher
+    ln -sf /bin/cinnamon-autostart "$STAGING"/usr/bin/cinnamon-autostart
+    ln -sf /bin/dpk-verify "$STAGING"/usr/bin/dpk-verify
     cat << 'EOF' > "$STAGING"/etc/X11/xorg.conf
 Section "Device"
     Identifier "Card0"
@@ -444,9 +503,9 @@ for root, dirs, files in os.walk(staging):
             subprocess.call(["strip", "--strip-unneeded", p], stderr=subprocess.DEVNULL)
 PYEOF
 
-printf "/usr/lib\n/usr/lib64\n/lib\n/lib64\n/usr/lib/cinnamon\n/usr/lib/muffin\n/usr/lib/cjs\n" > "$STAGING"/etc/ld.so.conf
+printf "/usr/lib\n/usr/lib64\n/lib\n/lib64\n/usr/lib/cinnamon\n/usr/lib/muffin\n/usr/lib/cjs\n/usr/lib/firefox\n" > "$STAGING"/etc/ld.so.conf
 ldconfig -r "$STAGING" 2>/dev/null || true
 
 cd "$STAGING"
-find . -print0 | cpio --null --create --format=newc | gzip -6 > /home/jaokhun/Projects/Depth/boot/depth-bare-initrd.img
+find . -print0 | cpio --null --create --format=newc --owner 0:0 | gzip -6 > /home/jaokhun/Projects/Depth/boot/depth-bare-initrd.img
 rm -rf "$STAGING"

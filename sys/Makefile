@@ -15,7 +15,9 @@ COREUTILS = $(BIN_DIR)/echo $(BIN_DIR)/cat $(BIN_DIR)/ls $(BIN_DIR)/cp \
             $(BIN_DIR)/tr $(BIN_DIR)/uniq $(BIN_DIR)/sort $(BIN_DIR)/network $(BIN_DIR)/net \
             $(BIN_DIR)/shutdown $(BIN_DIR)/which $(BIN_DIR)/file $(BIN_DIR)/hostname \
             $(BIN_DIR)/uptime $(BIN_DIR)/free $(BIN_DIR)/ps $(BIN_DIR)/cal \
-            $(BIN_DIR)/tail $(BIN_DIR)/df $(BIN_DIR)/cut $(BIN_DIR)/grep
+            $(BIN_DIR)/tail $(BIN_DIR)/df $(BIN_DIR)/cut $(BIN_DIR)/grep \
+            $(BIN_DIR)/cinnamon-watchdog $(BIN_DIR)/glare-launcher \
+            $(BIN_DIR)/cinnamon-autostart $(BIN_DIR)/dpk-verify
 
 ASM_OBJS = $(BUILD_DIR)/string.o $(BUILD_DIR)/mem.o $(BUILD_DIR)/io.o \
            $(BUILD_DIR)/avx2_mem.o $(BUILD_DIR)/string_simd.o $(BUILD_DIR)/hinux.o \

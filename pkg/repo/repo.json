@@ -1,64 +1,54 @@
 {
-  "name": "depth-hinux",
+  "repository": "depth-hinux",
   "version": "1.0.0",
-  "architecture": "hinux-x86_64",
-  "registry": "https://repo.depth-hinux.org/core",
   "packages": [
     {
-      "name": "depth-base",
-      "version": "1.0.0",
-      "arch": "x86_64",
-      "description": "Pure x86-64 assembly Hinux system core utilities and bedrock syscall layer (88.3% ASM)",
-      "file": "depth-base.dpk"
-    },
-    {
-      "name": "depth-sh",
-      "version": "1.0.0",
-      "arch": "x86_64",
-      "description": "Bedrock shell environment with dimensions node prompt",
-      "file": "depth-sh.dpk"
-    },
-    {
-      "name": "fastfetch",
-      "version": "2.68.1",
-      "arch": "x86_64",
-      "description": "Hinux system information telemetry with solid triangle D logo",
-      "file": "fastfetch.dpk"
-    },
-    {
-      "name": "cinnamon",
-      "version": "6.6.9",
-      "arch": "x86_64",
-      "description": "Cinnamon Desktop Environment for Glare edition with Muffin and Nemo",
-      "file": "cinnamon.dpk"
+      "name": "curl",
+      "file": "curl.dpk",
+      "size": 220,
+      "sha256": "960b17cfee866571592ce83c031cf1eef26f1c4b8016daa594128f325034cd87"
     },
     {
       "name": "firefox",
-      "version": "156.0",
-      "arch": "x86_64",
-      "description": "Mozilla Firefox web navigation engine with Glare pixel-to-font rendering",
-      "file": "firefox.dpk"
+      "file": "firefox.dpk",
+      "size": 82615380,
+      "sha256": "380711c4bebb1c1f813fe3dd6807c6352e6506c565850760d1fcdcbec533cc12"
     },
     {
-      "name": "google-chrome",
-      "version": "128.0.0",
-      "arch": "x86_64",
-      "description": "Web navigation engine and modern internet client",
-      "file": "google-chrome.dpk"
+      "name": "fastfetch",
+      "file": "fastfetch.dpk",
+      "size": 2755388,
+      "sha256": "11b36350ed4d69cab006a87d32957a08bbcabf8f8bf91ecc40e05c03ab0128d3"
+    },
+    {
+      "name": "depth-base",
+      "file": "depth-base.dpk",
+      "size": 1015,
+      "sha256": "d6115630d68180ce63f307c535085335fb7830c12f31203b84312da6a7446dd2"
     },
     {
       "name": "nano",
-      "version": "8.0",
-      "arch": "x86_64",
-      "description": "Lightweight bedside console text editor",
-      "file": "nano.dpk"
+      "file": "nano.dpk",
+      "size": 216,
+      "sha256": "2081574453ad05d8fbd79027b7604e7e6567794174e7bd381baeba1258cf9aa2"
     },
     {
-      "name": "curl",
-      "version": "8.7.1",
-      "arch": "x86_64",
-      "description": "Command line HTTP/HTTPS transfer client",
-      "file": "curl.dpk"
+      "name": "google-chrome",
+      "file": "google-chrome.dpk",
+      "size": 235,
+      "sha256": "bc7efecd2faf4e0f5fc3b669eb29483396a5c271a583416bd96c63560436fdb4"
+    },
+    {
+      "name": "depth-sh",
+      "file": "depth-sh.dpk",
+      "size": 305,
+      "sha256": "01c5b6e005b58947ef9c678ce94301816309238a23c002b557b10530eace7f8f"
+    },
+    {
+      "name": "cinnamon",
+      "file": "cinnamon.dpk",
+      "size": 539,
+      "sha256": "eda32851a7139afea73108e3309558aa0469d70109453670a9ba0e90f78c06dd"
     }
   ]
 }

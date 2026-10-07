@@ -32,22 +32,7 @@ build-target:
 	gcc -static -O2 -s -o sys/init/init sys/init/init.c
 	gcc -O2 -s -o installer/depth-install installer/depth-install.c
 	cp -f installer/depth-install sys/bin/depthinstall
-	gcc -O2 -s -o /tmp/firefox_bin pkg/src/firefox/firefox.c
-	mkdir -p /tmp/ff_pkg/bin /tmp/ff_pkg/usr/bin /tmp/ff_pkg/usr/lib/firefox /tmp/ff_pkg/etc/firefox
-	cp -f /tmp/firefox_bin /tmp/ff_pkg/bin/firefox
-	chmod +x /tmp/ff_pkg/bin/firefox
-	ln -sf /bin/firefox /tmp/ff_pkg/usr/bin/firefox
-	cp -f /usr/lib/firefox/firefox /tmp/ff_pkg/usr/lib/firefox/firefox 2>/dev/null || true
-	cp -f /usr/lib/firefox/application.ini /tmp/ff_pkg/usr/lib/firefox/ 2>/dev/null || true
-	cp -f /usr/lib/firefox/platform.ini /tmp/ff_pkg/usr/lib/firefox/ 2>/dev/null || true
-	printf "pref(\"browser.startup.homepage\", \"https://depth-hinux.org/welcome\");\n" > /tmp/ff_pkg/etc/firefox/firefox.conf
-	tar -czf pkg/repo/packages/firefox.dpk -C /tmp/ff_pkg .
-	rm -rf /tmp/ff_pkg /tmp/firefox_bin
-	mkdir -p /tmp/cin_pkg/usr/share/xsessions /tmp/cin_pkg/etc/cinnamon
-	cp -f /usr/share/xsessions/cinnamon*.desktop /tmp/cin_pkg/usr/share/xsessions/ 2>/dev/null || true
-	printf "[cinnamon]\ntheme=Mint-Y-Dark\nwindow_manager=muffin\nfile_manager=nemo\npanel_position=bottom\n" > /tmp/cin_pkg/etc/cinnamon/cinnamon.conf
-	tar -czf pkg/repo/packages/cinnamon.dpk -C /tmp/cin_pkg .
-	rm -rf /tmp/cin_pkg
+	./pkg/dive repo-index pkg/repo/packages
 	MODE=$(MODE) sh boot/build-initrd.sh
 
 iso: build
