@@ -18,8 +18,14 @@ cp -f /home/jaokhun/Projects/Depth/installer/depth-install "$STAGING"/bin/depthi
 cp -f /home/jaokhun/Projects/Depth/installer/depth-install "$STAGING"/usr/bin/depthinstall
 chmod +x "$STAGING"/bin/depthinstall "$STAGING"/usr/bin/depthinstall
 
-ln -sf /bin/shutdown "$STAGING"/sbin/shutdown
-ln -sf /bin/shutdown "$STAGING"/bin/poweroff
+ln -sf /bin/session-ctrl "$STAGING"/sbin/shutdown
+ln -sf /bin/session-ctrl "$STAGING"/bin/poweroff
+ln -sf /bin/session-ctrl "$STAGING"/bin/reboot
+ln -sf /bin/session-ctrl "$STAGING"/sbin/reboot
+ln -sf /bin/session-ctrl "$STAGING"/usr/bin/session-ctrl
+ln -sf /bin/session-ctrl "$STAGING"/usr/bin/cinnamon-session-quit
+ln -sf /bin/session-ctrl "$STAGING"/usr/bin/cinnamon-screensaver-command
+ln -sf /bin/depth-lock "$STAGING"/usr/bin/depth-lock
 ln -sf /bin/glare "$STAGING"/bin/desktop
 ln -sf /bin/glare "$STAGING"/bin/startx
 
@@ -56,9 +62,40 @@ ln -sf /bin/mount.x1 "$STAGING"/sbin/mount.x1
 ln -sf /bin/mount.x1 "$STAGING"/usr/bin/mount.x1
 ln -sf /bin/depth-bgd "$STAGING"/usr/bin/depth-bgd
 ln -sf /bin/depth-xsettings "$STAGING"/usr/bin/depth-xsettings
-for nss in /usr/lib/libnss_files* /usr/lib/libnss_dns* /usr/lib/libresolv*; do
+ln -sf /bin/list "$STAGING"/usr/bin/list
+ln -sf /bin/help "$STAGING"/usr/bin/help
+for nss in /usr/lib/libnss_files* /usr/lib/libnss_dns* /usr/lib/libresolv* /usr/lib/libnss_compat* /usr/lib/libnss_myhostname*; do
     cp -af "$nss" "$STAGING"/usr/lib/ 2>/dev/null || true
 done
+if [ -f /usr/lib/initcpio/busybox ]; then
+    cp -f /usr/lib/initcpio/busybox "$STAGING"/bin/busybox
+    chmod +x "$STAGING"/bin/busybox
+    ln -sf /bin/busybox "$STAGING"/bin/udhcpc
+    ln -sf /bin/busybox "$STAGING"/usr/bin/udhcpc
+    ln -sf /bin/busybox "$STAGING"/sbin/udhcpc
+fi
+mkdir -p "$STAGING"/usr/share/udhcpc "$STAGING"/etc
+cat << 'EOF' > "$STAGING"/usr/share/udhcpc/default.script
+case "$1" in
+    deconfig)
+        /bin/ip addr flush dev "$interface" 2>/dev/null || true
+        ;;
+    renew|bound)
+        /bin/ip addr add "$ip/$mask" dev "$interface" 2>/dev/null || true
+        if [ -n "$router" ]; then
+            /bin/ip route add default via "$router" dev "$interface" 2>/dev/null || true
+        fi
+        if [ -n "$dns" ]; then
+            printf "" > /etc/resolv.conf
+            for d in $dns; do
+                printf "nameserver %s\n" "$d" >> /etc/resolv.conf
+            done
+        fi
+        ;;
+esac
+EOF
+chmod +x "$STAGING"/usr/share/udhcpc/default.script
+ln -sf /usr/share/udhcpc/default.script "$STAGING"/etc/udhcpc.script
 cp -f /usr/bin/fastfetch "$STAGING"/bin/fastfetch
 cp -f /usr/bin/ip "$STAGING"/bin/ip 2>/dev/null || true
 cp -f /usr/bin/tar "$STAGING"/bin/tar 2>/dev/null || true
@@ -74,10 +111,11 @@ cp -f /home/jaokhun/Projects/Depth/pkg/repo/repo.json "$STAGING"/etc/dive/repo.j
 printf "dimensions\n" > "$STAGING"/etc/hostname
 printf "127.0.0.1\tlocalhost dimensions\n::1\tlocalhost ip6-localhost ip6-loopback\n" > "$STAGING"/etc/hosts
 printf "passwd: files\ngroup: files\nshadow: files\nhosts: files dns\nnetworks: files\nprotocols: files\nservices: files\nethers: files\nrpc: files\n" > "$STAGING"/etc/nsswitch.conf
-printf "nameserver 1.1.1.1\nnameserver 8.8.8.8\nnameserver 10.0.2.3\n" > "$STAGING"/etc/resolv.conf
-printf "export PS1=\"\\[\\033[1;31m\\]depth-hinux \\[\\033[0;31m\\]\\w\\[\\033[1;31m\\] # \\[\\033[0m\\] \"\nalias sudo=\"rac\"\n" > "$STAGING"/etc/bash.bashrc
-printf "export PS1=\"\\[\\033[1;31m\\]depth-hinux \\[\\033[0;31m\\]\\w\\[\\033[1;31m\\] # \\[\\033[0m\\] \"\nalias sudo=\"rac\"\n" > "$STAGING"/root/.bashrc
-printf "root:x:0:0:root:/root:/bin/sh\ndbus:x:81:81:System Message Bus:/:/usr/bin/nologin\npolkitd:x:102:102:PolicyKit Daemon:/:/usr/bin/nologin\navahi:x:84:84:Avahi:/:/usr/bin/nologin\ncolord:x:124:124:Colord:/:/usr/bin/nologin\nsystemd-network:x:192:192:systemd:/:/usr/bin/nologin\nsystemd-oom:x:999:999:systemd:/:/usr/bin/nologin\nsystemd-resolve:x:193:193:systemd:/:/usr/bin/nologin\nsystemd-timesync:x:194:194:systemd:/:/usr/bin/nologin\n" > "$STAGING"/etc/passwd
+printf "nameserver 10.0.2.3\nnameserver 1.1.1.1\nnameserver 8.8.8.8\n" > "$STAGING"/etc/resolv.conf
+printf "export PS1=\"\\[\\033[1;31m\\]depth-hinux \\[\\033[0;31m\\]\\w\\[\\033[1;31m\\] # \\[\\033[0m\\] \"\nenable -n help 2>/dev/null || true\nalias help=\"/bin/help\"\nalias sudo=\"rac\"\n" > "$STAGING"/etc/bash.bashrc
+printf "export PS1=\"\\[\\033[1;31m\\]depth-hinux \\[\\033[0;31m\\]\\w\\[\\033[1;31m\\] # \\[\\033[0m\\] \"\nenable -n help 2>/dev/null || true\nalias help=\"/bin/help\"\nalias sudo=\"rac\"\n" > "$STAGING"/root/.bashrc
+printf "export PS1=\"\\[\\033[1;31m\\]depth-hinux \\[\\033[0;31m\\]\\w\\[\\033[1;31m\\] # \\[\\033[0m\\] \"\nenable -n help 2>/dev/null || true\nalias help=\"/bin/help\"\nalias sudo=\"rac\"\n" > "$STAGING"/etc/profile
+printf "root:x:0:0:root:/root:/bin/bash\ndbus:x:81:81:System Message Bus:/:/usr/bin/nologin\npolkitd:x:102:102:PolicyKit Daemon:/:/usr/bin/nologin\navahi:x:84:84:Avahi:/:/usr/bin/nologin\ncolord:x:124:124:Colord:/:/usr/bin/nologin\nsystemd-network:x:192:192:systemd:/:/usr/bin/nologin\nsystemd-oom:x:999:999:systemd:/:/usr/bin/nologin\nsystemd-resolve:x:193:193:systemd:/:/usr/bin/nologin\nsystemd-timesync:x:194:194:systemd:/:/usr/bin/nologin\n" > "$STAGING"/etc/passwd
 printf "root:x:0:\ndbus:x:81:\npolkitd:x:102:\navahi:x:84:\ncolord:x:124:\nnetwork:x:90:\n" > "$STAGING"/etc/group
 printf "root:\$6\$W/s2mWJtU2KDanVG\$AxeYjt/g9d/qubvOm3eYCQikRlC2zaNLCF6RGeFiXkqiNGZhD8.H6FuUVox8V9aIbaBW9vUdUtVcfUfN8bi4/0:19800:0:99999:7:::\n" > "$STAGING"/etc/shadow
 
@@ -85,7 +123,7 @@ MODE_VAL="${MODE:-bare}"
 printf "%s\n" "$MODE_VAL" > "$STAGING"/etc/depth-mode
 
 if [ "$MODE_VAL" = "glare" ]; then
-    for b in /usr/bin/bwrap /usr/lib/Xorg /usr/bin/Xorg /usr/bin/xkbcomp /usr/bin/cinnamon /usr/bin/cinnamon2d /usr/bin/cinnamon-session /usr/bin/cinnamon-session-cinnamon /usr/bin/cinnamon-session-quit /usr/bin/cinnamon-settings /usr/bin/cinnamon-launcher /usr/bin/cinnamon-killer-daemon /usr/bin/muffin /usr/bin/nemo /usr/bin/nemo-desktop /usr/bin/dbus-daemon /usr/bin/dbus-launch /usr/bin/dbus-uuidgen /usr/bin/python3 /usr/bin/gnome-terminal /usr/bin/cjs /usr/bin/cjs-console /usr/bin/pkill /usr/bin/killall /usr/bin/setxkbmap /usr/bin/xmodmap /usr/bin/xrdb /usr/bin/cinnamon-subprocess-wrapper /usr/lib/libEGL_mesa.so.0 /usr/lib/libGLX_mesa.so.0 /usr/lib/libEGL.so.1 /usr/lib/libGL.so.1 /usr/lib/libGLdispatch.so.0 /usr/lib/gnome-terminal-server /usr/lib/gio-launch-desktop /usr/bin/firefox /usr/lib/dconf-service /usr/lib/gvfsd /usr/lib/cinnamon-settings-daemon/csd-xsettings /usr/lib/cinnamon-settings-daemon/csd-background /usr/lib/systemd/systemd-udevd /usr/bin/udevadm; do
+    for b in /usr/bin/bwrap /usr/lib/Xorg /usr/bin/Xorg /usr/bin/xkbcomp /usr/bin/cinnamon /usr/bin/cinnamon2d /usr/bin/cinnamon-session /usr/bin/cinnamon-session-cinnamon /usr/bin/cinnamon-settings /usr/bin/cinnamon-launcher /usr/bin/cinnamon-killer-daemon /usr/bin/muffin /usr/bin/nemo /usr/bin/nemo-desktop /usr/bin/dbus-daemon /usr/bin/dbus-launch /usr/bin/dbus-uuidgen /usr/bin/python3 /usr/bin/gnome-terminal /usr/bin/cjs /usr/bin/cjs-console /usr/bin/pkill /usr/bin/killall /usr/bin/setxkbmap /usr/bin/xmodmap /usr/bin/xrdb /usr/bin/cinnamon-subprocess-wrapper /usr/lib/libEGL_mesa.so.0 /usr/lib/libGLX_mesa.so.0 /usr/lib/libEGL.so.1 /usr/lib/libGL.so.1 /usr/lib/libGLdispatch.so.0 /usr/lib/gnome-terminal-server /usr/lib/gio-launch-desktop /usr/bin/firefox /usr/lib/dconf-service /usr/lib/gvfsd /usr/lib/cinnamon-settings-daemon/csd-xsettings /usr/lib/cinnamon-settings-daemon/csd-background /usr/lib/systemd/systemd-udevd /usr/bin/udevadm; do
         if [ -f "$b" ]; then
             td="$STAGING"$(dirname "$b")
             mkdir -p "$td"
@@ -93,6 +131,8 @@ if [ "$MODE_VAL" = "glare" ]; then
             chmod +x "$td"/"$(basename "$b")"
         fi
     done
+    ln -sf /bin/session-ctrl "$STAGING"/usr/bin/cinnamon-session-quit
+    ln -sf /bin/session-ctrl "$STAGING"/usr/bin/cinnamon-screensaver-command
     mkdir -p "$STAGING"/usr/lib/firefox
     cp -af /usr/lib/firefox/* "$STAGING"/usr/lib/firefox/ 2>/dev/null || true
     for rem in crashreporter crashhelper pingsender gfxtest; do
@@ -118,7 +158,7 @@ EOF
 Default=default
 Locked=1
 EOF
-    printf 'user_pref("toolkit.telemetry.enabled", false);\nuser_pref("browser.shell.checkDefaultBrowser", false);\nuser_pref("browser.startup.homepage", "about:home");\nuser_pref("browser.offline", false);\nuser_pref("network.dns.disableIPv6", true);\nuser_pref("network.proxy.type", 0);\nuser_pref("media.rdd-ffmpeg.enabled", true);\nuser_pref("media.ffmpeg.vaapi.enabled", false);\nuser_pref("media.hardware-video-decoding.enabled", false);\nuser_pref("security.cert_pinning.enforcement_level", 1);\nuser_pref("security.nocertdb", false);\n' > "$STAGING"/root/.mozilla/firefox/default/user.js
+    printf 'user_pref("toolkit.telemetry.enabled", false);\nuser_pref("browser.shell.checkDefaultBrowser", false);\nuser_pref("browser.startup.homepage", "about:home");\nuser_pref("browser.offline", false);\nuser_pref("network.dns.disableIPv6", true);\nuser_pref("network.proxy.type", 0);\nuser_pref("network.trr.mode", 5);\nuser_pref("network.dns.native-https-query", false);\nuser_pref("network.captive-portal-service.enabled", false);\nuser_pref("network.connectivity-service.enabled", false);\nuser_pref("security.sandbox.content.level", 0);\nuser_pref("security.sandbox.socket.process.level", 0);\nuser_pref("webgl.force-enabled", true);\nuser_pref("webgl.disabled", false);\nuser_pref("layers.acceleration.force-enabled", true);\nuser_pref("gfx.canvas.accelerated", true);\nuser_pref("media.alsa.enabled", true);\nuser_pref("media.cubeb.backend", "alsa");\nuser_pref("media.rdd-ffmpeg.enabled", true);\nuser_pref("media.webm.enabled", true);\nuser_pref("media.mp4.enabled", true);\nuser_pref("media.mediasource.enabled", true);\nuser_pref("media.mediasource.webm.enabled", true);\nuser_pref("media.mediasource.mp4.enabled", true);\nuser_pref("media.eme.enabled", true);\nuser_pref("media.ffmpeg.vaapi.enabled", false);\nuser_pref("media.hardware-video-decoding.enabled", false);\nuser_pref("security.cert_pinning.enforcement_level", 1);\nuser_pref("security.nocertdb", false);\n' > "$STAGING"/root/.mozilla/firefox/default/user.js
     if [ -f "$STAGING"/usr/lib/firefox/firefox ]; then
         mv "$STAGING"/usr/lib/firefox/firefox "$STAGING"/usr/lib/firefox/firefox.real
         printf '#!/bin/sh\n' > "$STAGING"/usr/lib/firefox/firefox
@@ -126,6 +166,12 @@ EOF
 mkdir -p /root/.mozilla/firefox/default
 export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 export SSL_CERT_DIR=/etc/ssl/certs
+export MOZ_DISABLE_CONTENT_SANDBOX=1
+export MOZ_DISABLE_SOCKET_PROCESS=1
+export MOZ_DISABLE_RDD_SANDBOX=1
+export MOZ_DISABLE_GMP_SANDBOX=1
+export MOZ_ACCELERATED=1
+export MOZ_WEBRENDER=1
 /bin/ip link set lo up 2>/dev/null || true
 chown -R 0:0 /root 2>/dev/null || true
 rm -f /root/.mozilla/firefox/*/.parentlock /root/.mozilla/firefox/*/lock 2>/dev/null || true
@@ -146,10 +192,14 @@ EOF
     if [ -f /etc/ca-certificates/extracted/tls-ca-bundle.pem ]; then
         cp -f /etc/ca-certificates/extracted/tls-ca-bundle.pem "$STAGING"/etc/ca-certificates/extracted/tls-ca-bundle.pem
     fi
-    mkdir -p "$STAGING"/etc/ssl/certs
+    if [ -d /etc/ca-certificates/extracted/cadir ]; then
+        cp -rf /etc/ca-certificates/extracted/cadir "$STAGING"/etc/ca-certificates/extracted/
+    fi
+    mkdir -p "$STAGING"/etc/ssl/certs "$STAGING"/etc/pki/tls/certs
     if [ -f /etc/ca-certificates/extracted/tls-ca-bundle.pem ]; then
         cp -f /etc/ca-certificates/extracted/tls-ca-bundle.pem "$STAGING"/etc/ssl/certs/ca-certificates.crt
         cp -f /etc/ca-certificates/extracted/tls-ca-bundle.pem "$STAGING"/etc/ssl/cert.pem
+        cp -f /etc/ca-certificates/extracted/tls-ca-bundle.pem "$STAGING"/etc/pki/tls/certs/ca-bundle.crt
     fi
     mkdir -p "$STAGING"/etc "$STAGING"/var/lib/dbus
     printf "9b8f2a1e0d3c4b5a6978123456789abc\n" > "$STAGING"/etc/machine-id
@@ -634,8 +684,14 @@ mkdir -p "$STAGING"/usr/lib/modules
 cp -f /home/jaokhun/Projects/Depth/boot/modules/e1000.ko "$STAGING"/usr/lib/modules/ 2>/dev/null || true
 cp -f /home/jaokhun/Projects/Depth/boot/modules/bochs.ko "$STAGING"/usr/lib/modules/ 2>/dev/null || true
 cp -f /home/jaokhun/Projects/Depth/boot/modules/snd-hda-*.ko "$STAGING"/usr/lib/modules/ 2>/dev/null || true
-for mlib in /usr/lib/libavcodec* /usr/lib/libavformat* /usr/lib/libavutil* /usr/lib/libswresample* /usr/lib/libasound* /usr/lib/libpulse*; do
+for mlib in /usr/lib/libavcodec* /usr/lib/libavformat* /usr/lib/libavutil* /usr/lib/libswresample* /usr/lib/libasound* /usr/lib/libpulse* /usr/lib/libvpx* /usr/lib/libopus* /usr/lib/libvorbis* /usr/lib/libogg* /usr/lib/libx264* /usr/lib/libaom* /usr/lib/libdav1d* /usr/lib/libmp3lame* /usr/lib/libpipewire* /usr/lib/libtheora* /usr/lib/libgbm* /usr/lib/libdrm* /usr/lib/libvulkan*; do
     cp -af "$mlib" "$STAGING"/usr/lib/ 2>/dev/null || true
+done
+mkdir -p "$STAGING"/usr/lib/dri
+for drv in /usr/lib/dri/kms_swrast_dri.so /usr/lib/dri/swrast_dri.so; do
+    if [ -f "$drv" ]; then
+        cp -f "$drv" "$STAGING"/usr/lib/dri/ 2>/dev/null || true
+    fi
 done
 
 python3 - << 'PYEOF'
@@ -646,7 +702,9 @@ cinnamon_libs = [
     "libibus-1.0.so.5", "libaccountsservice.so.1", "libxapp.so.1",
     "libgcr-base-3.so.1", "libgcr-ui-3.so.1", "libnotify.so.4",
     "libpolkit-agent-1.so.0", "libpolkit-gobject-1.so.0", "libupower-glib.so.3",
-    "libnm.so.0", "libnma.so.0", "libtimezonemap.so.1"
+    "libnm.so.0", "libnma.so.0", "libtimezonemap.so.1",
+    "libnss_dns.so.2", "libnss_files.so.2", "libnss_compat.so.2",
+    "libnss_myhostname.so.2", "libresolv.so.2"
 ]
 for l in cinnamon_libs:
     src = os.path.join("/usr/lib", l)
@@ -711,7 +769,18 @@ if os.path.isdir(py_dir):
         if "__pycache__" in dirs:
             subprocess.call(["rm", "-rf", os.path.join(root, "__pycache__")])
 
-for idir in ["usr/share/icons/Adwaita", "usr/share/icons/hicolor"]:
+for doc_dir in ["usr/share/doc", "usr/share/man", "usr/share/info", "usr/share/help"]:
+    full_doc = os.path.join(staging, doc_dir)
+    if os.path.isdir(full_doc):
+        subprocess.call(["rm", "-rf", full_doc])
+
+loc_dir = os.path.join(staging, "usr/share/locale")
+if os.path.isdir(loc_dir):
+    for entry in os.listdir(loc_dir):
+        if not (entry.startswith("en") or entry.startswith("C") or entry == "locale.alias"):
+            subprocess.call(["rm", "-rf", os.path.join(loc_dir, entry)])
+
+for idir in ["usr/share/icons/Adwaita", "usr/share/icons/hicolor", "usr/share/icons/Flat-Remix-Red-Dark"]:
     full_idir = os.path.join(staging, idir)
     if os.path.isdir(full_idir):
         for item in ["64x64", "96x96", "128x128", "256x256", "512x512", "cursors"]:
@@ -731,8 +800,10 @@ for root, dirs, files in os.walk(staging):
         p = os.path.join(root, f)
         if os.path.islink(p):
             continue
-        if p.endswith(".so") or ".so." in f or os.access(p, os.X_OK):
+        if p.endswith(".so") or ".so." in f:
             subprocess.call(["strip", "--strip-unneeded", p], stderr=subprocess.DEVNULL)
+        elif os.access(p, os.X_OK) and not p.endswith(".sh") and not p.endswith(".py"):
+            subprocess.call(["strip", "--strip-all", p], stderr=subprocess.DEVNULL)
 PYEOF
 
 printf "/usr/lib\n/usr/lib64\n/lib\n/lib64\n/usr/lib/cinnamon\n/usr/lib/muffin\n/usr/lib/cjs\n/usr/lib/firefox\n" > "$STAGING"/etc/ld.so.conf

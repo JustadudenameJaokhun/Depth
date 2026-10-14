@@ -78,11 +78,13 @@ run-kernel: kernel
 		-no-reboot
 
 run:
+	@if [ ! -f boot/depth-hdd.img ]; then truncate -s 1G boot/depth-hdd.img; fi
 	qemu-system-x86_64 \
 		$(KVM_OPTS) \
 		-kernel /boot/vmlinuz-linux \
 		-initrd boot/depth-bare-initrd.img \
 		-append "console=ttyS0 console=tty0 loglevel=7 ignore_loglevel net.ifnames=0 biosdevname=0 panic=1 rdinit=/init" \
+		-drive file=boot/depth-hdd.img,format=raw,id=hdd0,if=none -device virtio-blk-pci,drive=hdd0 \
 		-netdev user,id=net0,dns=1.1.1.1 \
 		-device e1000,netdev=net0 \
 		-audiodev pa,id=snd0 \
@@ -95,11 +97,13 @@ run:
 		-no-reboot
 
 run-iso: iso
+	@if [ ! -f boot/depth-hdd.img ]; then truncate -s 1G boot/depth-hdd.img; fi
 	@if head -c 1024 boot/depth-hinux.iso 2>/dev/null | grep -q "EFI PART" || [ "$(BOOT_ARCH)" = "gpt" ] || [ "$(BOOT_ARCH)" = "uefi" ]; then \
 		qemu-system-x86_64 \
 			$(KVM_OPTS) \
 			-bios /usr/share/edk2/x64/OVMF.4m.fd \
 			-drive file=boot/depth-hinux.iso,format=raw,media=disk \
+			-drive file=boot/depth-hdd.img,format=raw,id=hdd0,if=none -device virtio-blk-pci,drive=hdd0 \
 			-boot c \
 			-netdev user,id=net0,dns=1.1.1.1 \
 			-device e1000,netdev=net0 \
@@ -115,6 +119,7 @@ run-iso: iso
 		qemu-system-x86_64 \
 			$(KVM_OPTS) \
 			-cdrom boot/depth-hinux.iso \
+			-drive file=boot/depth-hdd.img,format=raw,id=hdd0,if=none -device virtio-blk-pci,drive=hdd0 \
 			-boot d \
 			-netdev user,id=net0,dns=1.1.1.1 \
 			-device e1000,netdev=net0 \
@@ -129,10 +134,12 @@ run-iso: iso
 	fi
 
 run-uefi:
+	@if [ ! -f boot/depth-hdd.img ]; then truncate -s 1G boot/depth-hdd.img; fi
 	qemu-system-x86_64 \
 		$(KVM_OPTS) \
 		-bios /usr/share/edk2/x64/OVMF.4m.fd \
 		-drive file=boot/depth-hinux.iso,format=raw,media=disk \
+		-drive file=boot/depth-hdd.img,format=raw,id=hdd0,if=none -device virtio-blk-pci,drive=hdd0 \
 		-boot c \
 		-netdev user,id=net0,dns=1.1.1.1 \
 		-device e1000,netdev=net0 \
@@ -146,9 +153,11 @@ run-uefi:
 		-no-reboot
 
 run-mbr:
+	@if [ ! -f boot/depth-hdd.img ]; then truncate -s 1G boot/depth-hdd.img; fi
 	qemu-system-x86_64 \
 		$(KVM_OPTS) \
 		-cdrom boot/depth-hinux.iso \
+		-drive file=boot/depth-hdd.img,format=raw,id=hdd0,if=none -device virtio-blk-pci,drive=hdd0 \
 		-boot d \
 		-netdev user,id=net0,dns=1.1.1.1 \
 		-device e1000,netdev=net0 \
@@ -176,6 +185,6 @@ run-cli:
 clean:
 	$(MAKE) -C sys clean
 	$(MAKE) -C sys/kernel clean
-	rm -f pkg/dive sys/init/init installer/depth-install sys/bin/depthinstall sys/bin/glare boot/depth-bare-initrd.img boot/depth-hinux.iso boot/efiboot.img
+	rm -f pkg/dive sys/init/init installer/depth-install sys/bin/depthinstall sys/bin/glare boot/depth-bare-initrd.img boot/depth-hinux.iso boot/efiboot.img boot/depth-hdd.img
 
 .PHONY: all bare glare build build-target iso kernel run-kernel run run-iso run-uefi run-mbr run-cli clean

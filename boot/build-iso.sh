@@ -92,7 +92,7 @@ else
     rm -f "$EFI_IMG"
     INITRD_SZ=$(stat -c%s /home/jaokhun/Projects/Depth/boot/depth-bare-initrd.img 2>/dev/null || echo 60000000)
     KERN_SZ=$(stat -c%s /boot/vmlinuz-linux 2>/dev/null || echo 20000000)
-    REQ_MB=$(( (INITRD_SZ + KERN_SZ) / 1048576 + 64 ))
+    REQ_MB=$(( (INITRD_SZ + KERN_SZ) / 1048576 + 12 ))
     dd if=/dev/zero of="$EFI_IMG" bs=1M count="$REQ_MB" 2>/dev/null
     mkfs.vfat -F 32 -n "DEPTH_EFI" "$EFI_IMG" >/dev/null 2>&1
     mmd -i "$EFI_IMG" ::EFI

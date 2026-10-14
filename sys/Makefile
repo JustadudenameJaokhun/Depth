@@ -24,6 +24,8 @@ COREUTILS = $(BIN_DIR)/echo $(BIN_DIR)/cat $(BIN_DIR)/ls $(BIN_DIR)/cp \
             $(BIN_DIR)/mount.x1 $(BIN_DIR)/x1-mount \
             $(BIN_DIR)/depth-bgd $(BIN_DIR)/depth-xsettings \
             $(BIN_DIR)/cinnamon-killer-daemon $(BIN_DIR)/depth-powerd \
+            $(BIN_DIR)/list $(BIN_DIR)/help \
+            $(BIN_DIR)/depth-lock $(BIN_DIR)/session-ctrl \
             $(BIN_DIR)/depth-boot.bin
 
 ASM_OBJS = $(BUILD_DIR)/string.o $(BUILD_DIR)/mem.o $(BUILD_DIR)/io.o \
@@ -38,7 +40,8 @@ ASM_OBJS = $(BUILD_DIR)/string.o $(BUILD_DIR)/mem.o $(BUILD_DIR)/io.o \
            $(BUILD_DIR)/glare_widgets.o $(BUILD_DIR)/vfs_ext.o \
            $(BUILD_DIR)/glare_theme.o $(BUILD_DIR)/glare_draw_fast.o \
            $(BUILD_DIR)/glare_fx.o $(BUILD_DIR)/glare_terminal.o $(BUILD_DIR)/glare_layout.o \
-           $(BUILD_DIR)/cinnamon_theme.o $(BUILD_DIR)/cinnamon_panel.o
+           $(BUILD_DIR)/cinnamon_theme.o $(BUILD_DIR)/cinnamon_panel.o \
+           $(BUILD_DIR)/hinux_gl.o $(BUILD_DIR)/hinux_vk.o
 
 all: $(BIN_DIR) $(BUILD_DIR) $(COREUTILS) $(ASM_OBJS)
 

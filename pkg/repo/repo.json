@@ -41,6 +41,12 @@
       "sha256": "2081574453ad05d8fbd79027b7604e7e6567794174e7bd381baeba1258cf9aa2"
     },
     {
+      "name": "webcam",
+      "file": "webcam.dpk",
+      "size": 1430,
+      "sha256": "a00b06c72954bd4a5175928d4025bb4e7ceba7143c4f0f1f66a97a77f3c0b334"
+    },
+    {
       "name": "depth-sh",
       "file": "depth-sh.dpk",
       "size": 305,

@@ -13,6 +13,7 @@
 #include <sys/syscall.h>
 #include <termios.h>
 #include <errno.h>
+#include <dirent.h>
 
 static void setup_console(void) {
     setsid();
@@ -149,7 +150,7 @@ int main(void) {
 
     FILE *fpw = fopen("/etc/passwd", "w");
     if (fpw) {
-        fputs("root:x:0:0:root:/root:/bin/sh\ndbus:x:81:81:System Message Bus:/:/usr/bin/nologin\n", fpw);
+        fputs("root:x:0:0:root:/root:/bin/bash\ndbus:x:81:81:System Message Bus:/:/usr/bin/nologin\n", fpw);
         fclose(fpw);
     }
 
@@ -184,10 +185,25 @@ int main(void) {
     }
 
     system("/bin/ip link set lo up 2>/dev/null || true");
-    if (is_qemu) {
-        system("/bin/ip link set eth0 up 2>/dev/null || true");
-        system("/bin/ip addr add 10.0.2.15/24 dev eth0 2>/dev/null || true");
-        system("/bin/ip route add default via 10.0.2.2 dev eth0 2>/dev/null || true");
+    DIR *dnet = opendir("/sys/class/net");
+    if (dnet) {
+        struct dirent *de;
+        while ((de = readdir(dnet)) != NULL) {
+            if (de->d_name[0] == '.' || strcmp(de->d_name, "lo") == 0) continue;
+            char cmd[512];
+            snprintf(cmd, sizeof(cmd), "/bin/ip link set %s up 2>/dev/null || true", de->d_name);
+            system(cmd);
+            if (is_qemu) {
+                snprintf(cmd, sizeof(cmd), "/bin/ip addr add 10.0.2.15/24 dev %s 2>/dev/null || true", de->d_name);
+                system(cmd);
+                snprintf(cmd, sizeof(cmd), "/bin/ip route add default via 10.0.2.2 dev %s 2>/dev/null || true", de->d_name);
+                system(cmd);
+            } else {
+                snprintf(cmd, sizeof(cmd), "/bin/udhcpc -i %s -b -q 2>/dev/null || true", de->d_name);
+                system(cmd);
+            }
+        }
+        closedir(dnet);
     }
 
     mkdir("/run/user", 0755);
